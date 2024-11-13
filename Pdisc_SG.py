@@ -82,17 +82,77 @@ def plot_grid(sol_grid, R, plots):
         plt.gca().set_aspect('equal')
     if (plots=='both' or plots=='sg'):
         plt.figure(2)
-        x = np.linspace(0,R0,npts)
-        y = np.linspace(0,R0,npts)
+        x = np.linspace(0,R,npts)
+        y = np.linspace(0,R,npts)
         x, y = np.meshgrid(x,y)
         ax = plt.axes(projection='3d')
         ax.plot_surface(x, y, sol_grid[:,:,2], alpha=0.5)
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('rho')
+        
+    
+# place a branch point and return a solution grid representing the new L-shape region
+def place_bp(sol_grid, cutoff):
+    npts = sol_grid[:,:,0].shape[0]
+    base_grid = np.zeros((npts,npts,3))
+
+    # finding branch points
+    us = 0
+    vs = 0
+    for i in range(npts):
+        if sol_grid[-1,i,2] >= cutoff:
+            us = i-1
+        if sol_grid[i,-1,2] >= cutoff:
+            vs = i-1
+        if (vs != 0 and us != 0):
+            break
+    
+    if (us == 0 and vs == 0):
+        print('No branch points were needed \n returning original grid')
+        return sol_grid
+    if (vs < 0 or us < 0):
+        print('Inappropriate boundary data, branch point placement impossible')
+        return sol_grid
+    
+    base_grid[:    , :us + 1, :] = sol_grid[:    , :us + 1, :]
+    base_grid[:vs+1, us+1:  , :] = sol_grid[:vs+1, us+1:  , :]
+    
+    # Sometimes the above placement of a branch point won't work and we have
+    # to decrease the index of the branch point like so
+    # this ensures that our L-shaped region has values strictly less than
+    # the cutoff
+    while ((np.any(base_grid[:,:,2] > cutoff)) and (us > 0 and vs > 0)):
+        us -= 1
+        vs -= 1
+        base_grid = np.zeros((npts,npts,3))
+        base_grid[:    , :us + 1, :] = sol_grid[:    , :us + 1, :]
+        base_grid[:vs+1, us + 1:  , :] = sol_grid[:vs+1, us + 1:  , :]
+    
+    if (us==0 or vs==0):
+        print("Warning, degenerate case: us = 0 or vs = 0")
+    
+    plt.figure(1)
+    plt.scatter(sol_grid[us,vs,0], sol_grid[us,vs,1], color='red')
+    
+    return base_grid, (us,vs)
+
+# given a base_grid this creates the three new sectors stemming from it 
+def create_sectors(base_grid, bp_loc):
+     npts = base_grid[:,:,0].shape[0]
+     us = bp_loc[0]
+     vs = bp_loc[1]
+     ax1_len = npts - bp_loc[0]
+     ax2_len = npts - bp_loc[1]
+     ax1 = base_grid[us:,vs,:]
+     ax2 = base_grid[us,vs:,:]
+     
+     
+     
+    
 
 # Make the boundary geodesics
-npts = 50
+npts = 40
 R0 = 3
 phi0 = np.pi/2
 sep = R0 / npts
@@ -110,7 +170,12 @@ ax2 = np.concatenate((ax2,phis), axis=0)
 
 # Getting solution
 sol_grid = grid_solve(ax1, ax2)
+cut, bp_loc = place_bp(sol_grid, 3.1)
 
-plot_grid(sol_grid, R0, 'both')
+# Plotting
+plot_grid(cut, R0, 'both')
+
+
+
 
 
