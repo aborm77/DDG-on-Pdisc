@@ -139,8 +139,10 @@ def create_sectors(base_grid, bp_loc, sep):
      sect2 = np.zeros((max_len,max_len,3))
      sect3 = np.zeros((ax3_len,ax3_len,3))
      
-     ax1 = base_grid[us:,vs,:]
-     ax3 = base_grid[us,vs:,:]
+     ax1 = np.copy(base_grid[us:,vs,:])
+     ax3 = np.copy(base_grid[us,vs:,:])
+     ax1[:,2] = ax1[:,2] - 2 * bp_val
+     ax3[:,2] = ax3[:,2] - 2 * bp_val
      
      z2 = base_grid[us+1, vs ,:2]
      z0 = base_grid[us  ,vs  ,:2]
@@ -155,11 +157,8 @@ def create_sectors(base_grid, bp_loc, sep):
      phi1 = (2*arg1 + arg2) / 3
      phi2 = (arg1 + 2*arg2) / 3
      
-     print('Phis', (phi1,phi2))
-     
      geo1 = create_geo(phi1, sep, max_len, np.full((1,max_len),bp_val))
      geo2 = create_geo(phi2, sep, max_len, np.full((1,max_len),bp_val))
-     
      for i in range(max_len):
          geo1[i,:2] = f(geo1[i,:2],z0)
          geo2[i,:2] = f(geo2[i,:2],z0)
@@ -199,8 +198,6 @@ def plot_grid(sol_grid, R, plots):
         plt.scatter(sol_grid[:,:,0],sol_grid[:,:,1], alpha=0.5)
         plt.xlim(-0.1, np.tanh(R/2)+0.1)
         plt.ylim(-0.1, np.tanh(R/2)+0.1)
-        # plt.xlim(-0.1, 0.1)
-        # plt.ylim(-0.1, 0.1)
         plt.gca().set_aspect('equal')
     if (plots=='both' or plots=='sg'):
         plt.figure(2)
@@ -214,7 +211,7 @@ def plot_grid(sol_grid, R, plots):
         ax.set_zlabel('rho')
 
 # Plotting
-com = 'pdisc'
+com = 'both'
 plot_grid(base_grid, R0, com)
 plot_grid(sect1, R0, com)
 plot_grid(sect3, R0, com)
