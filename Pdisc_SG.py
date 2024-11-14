@@ -17,7 +17,7 @@ def rot(phi):
 
 # Applies the mobius function described in the distribtued branch points paper
 # The function has been rationalized so we can just apply it to real vectors
-def f(pt,z0):
+def f(pt, z0):
     dot = 1 + pt[0] * z0[0] + pt[1] * z0[1]
     cross = pt[1] * z0[0] - pt[0] * z0[1]
     denom = dot**2 + cross**2
@@ -145,18 +145,21 @@ def create_sectors(base_grid, bp_loc, sep):
      z2 = base_grid[us+1, vs ,:2]
      z0 = base_grid[us  ,vs  ,:2]
      z1 = base_grid[us  ,vs+1,:2]
+
      w2 = f(z2,-z0)
      w1 = f(z1,-z0)
-     e1 = np.array([1,0])
-     arg1 = angle(e1,w1)
-     arg2 = angle(e1,w2)
+     arg1 = np.arctan2(w1[1],w1[0])
+     arg2 = np.arctan2(w2[1],w2[0])
      
      # finding angles and creating geodesics
      phi1 = (2*arg1 + arg2) / 3
      phi2 = (arg1 + 2*arg2) / 3
+     
+     print('Phis', (phi1,phi2))
+     
      geo1 = create_geo(phi1, sep, max_len, np.full((1,max_len),bp_val))
      geo2 = create_geo(phi2, sep, max_len, np.full((1,max_len),bp_val))
-     # transforming geodesics back to z0
+     
      for i in range(max_len):
          geo1[i,:2] = f(geo1[i,:2],z0)
          geo2[i,:2] = f(geo2[i,:2],z0)
@@ -164,36 +167,27 @@ def create_sectors(base_grid, bp_loc, sep):
      # solving on new grids
      sect1 = grid_solve(geo2, ax1)
      sect2 = grid_solve(geo1, geo2)
-     sect3 = grid_solve(ax3,geo1)
-     
+     sect3 = grid_solve(ax3, geo1)
      
      return sect1, sect2, sect3
      
     
 
 # Make the boundary geodesics
-npts = 30
-R0 = 6
-phi0 = 1.1
+npts = 50
+R0 = 10
+phi0 = np.pi/2
 sep = R0 / npts
-
-# x1 = np.linspace(0,R0,npts)
-# x1 = np.tanh(x1/2)
-# y1 = np.zeros(npts)
-
-# ax1 = np.vstack((x1,y1))
-# ax2 = np.matmul(rot(phi0), ax1)
+cutoff = 3.1
 
 phis = np.full((1,npts), phi0)
-# ax1 = np.concatenate((ax1,phis), axis=0)
-# ax2 = np.concatenate((ax2,phis), axis=0)
 
 ax1 = create_geo(0, sep, npts, phis)
 ax2 = create_geo(phi0, sep, npts, phis)
 
 # Getting solution
 sol_grid = grid_solve(ax1, ax2)
-base_grid, bp_loc = place_bp(sol_grid, 2.5)
+base_grid, bp_loc = place_bp(sol_grid, cutoff)
 sect1, sect2, sect3 = create_sectors(base_grid, bp_loc, sep)
 
 
@@ -205,6 +199,8 @@ def plot_grid(sol_grid, R, plots):
         plt.scatter(sol_grid[:,:,0],sol_grid[:,:,1], alpha=0.5)
         plt.xlim(-0.1, np.tanh(R/2)+0.1)
         plt.ylim(-0.1, np.tanh(R/2)+0.1)
+        # plt.xlim(-0.1, 0.1)
+        # plt.ylim(-0.1, 0.1)
         plt.gca().set_aspect('equal')
     if (plots=='both' or plots=='sg'):
         plt.figure(2)
