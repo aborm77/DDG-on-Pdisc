@@ -173,8 +173,8 @@ def create_sectors(base_grid, bp_loc, sep):
     
 
 # Make the boundary geodesics
-npts = 50
-R0 = 10
+npts = 100
+R0 = 4
 phi0 = np.pi/2
 sep = R0 / npts
 cutoff = 3.1
@@ -212,6 +212,7 @@ def plot_grid(sol_grid, R, plots):
 
 # Plotting
 com = 'both'
+# plot_grid(sol_grid, R0, com)
 plot_grid(base_grid, R0, com)
 plot_grid(sect1, R0, com)
 plot_grid(sect3, R0, com)
