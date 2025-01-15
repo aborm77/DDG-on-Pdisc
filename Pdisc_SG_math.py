@@ -44,4 +44,8 @@ def angle(w1,w2):
     return np.arccos(dot / (norm(w1) * norm(w2)))
 
 
+# Computes geodesic distance of a point from the origin
+def geo_dist(w):
+    return 2*np.arctan(norm(w))
+
 
