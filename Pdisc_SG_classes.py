@@ -12,6 +12,10 @@ import Pdisc_SG_math as math_ddg
 import Pdisc_SG_vis as vis
 
 
+"""
+This class creates a cheby net on the p-disc given x- and y-boundary data
+and a maximal geodesic radius
+"""
 class Sol_grid:
     def __init__(self, xbd, ybd, parent, r):
         self.xbd = xbd
@@ -28,28 +32,11 @@ class Sol_grid:
         self.children = None
         
         self.grid = self.grid_solve()     
-        self.grid_clean()
-    
-    # Removes points on the grid that lie outside the geodesic radius
-    def grid_clean(self):
-        clean_grid = np.copy(self.grid)
-        for i in range(1, self.rows):
-            for j in range(1, self.cols):
-                z2 = self.grid[i,j-1,:2]
-                z1 = self.grid[i-1,j  ,:2]
-                d1 = math_ddg.geo_dist(z1)
-                d2 = math_ddg.geo_dist(z2)
-                
-                if (d1 > self.r) and (d2 > self.r):
-                    clean_grid[i,j,:] = np.nan
-      
-        self.grid = clean_grid
         
     # given boundary data on two rays creates a Chebyshev net on the Poincare disk
     # sol_grid stores x values of pts in [:,:,0], y values in [:,:,1], and the solution
     # to the sine-Gordon equation in [:,:,2]
     def grid_solve(self):
-    
         sol_grid = np.zeros((self.rows, self.cols, 3))
         sol_grid[0,:,:] = self.xbd
         sol_grid[:,0,:] = self.ybd
@@ -69,13 +56,18 @@ class Sol_grid:
         return sol_grid
     
 
+
+"""
+This class preforms the branch point placement process and in doing so creates
+a tree of Sol_grid objects
+"""
 class Sol_tree:
     def __init__(self, phi0, cutoff, r, sep):
         self.phi0 = phi0
         self.cutoff = cutoff
         self.r = r
         self.sep = sep
-        self.npts = int(np.ceil(2 * r / sep))
+        self.npts = int(np.ceil(r / sep))
         
         if (phi0 >= np.pi or phi0 <=0):
             print("Error: phi0 is not in the allowed range of (0,pi)")
@@ -104,6 +96,20 @@ class Sol_tree:
         ax = np.concatenate((ax,phis), axis=0)
             
         return ax.T
+        
+    
+    # checks to see if the boundry of the sectore lies outside the geodesic 
+    # of radius self,r
+    def bndry_check(self, sol_grid):
+        xpts = sol_grid.xbd[:,:2]
+        ypts = sol_grid.ybd[:,:2]
+        pts = np.vstack((xpts,ypts))
+        
+        for pt in pts:
+            if math_ddg.geo_dist(pt) < sol_grid.r:
+                return False
+        return True
+    
     
     # place a branch point and return a solution grid representing the new L-shaped region
     def place_bp(self, sol_grid):
@@ -127,9 +133,11 @@ class Sol_tree:
                 vs = i-1
                 break
         
-        if (vs < 0 or us < 0):
-            print('Inappropriate boundary data, branch point placement impossible')
+        if (vs < 0) or (us < 0):
+            print('Error: inappropriate boundary data, branch point placement impossible')
             return -1
+        if (vs == 0) or (us == 0):
+            print('Warning: branch point was placed on a boundary')
         
         base_grid[:    , :vs + 1, :] = sol_grid.grid[:    , :vs + 1, :]
         base_grid[:us+1, vs+1:  , :] = sol_grid.grid[:us+1, vs+1:  , :]
@@ -137,6 +145,9 @@ class Sol_tree:
             
         sol_grid.grid = base_grid
         sol_grid.bp_loc = (us,vs)
+        
+        if self.bndry_check(sol_grid):
+            return
         
         return (us,vs)
     
@@ -192,29 +203,30 @@ class Sol_tree:
         
     # preforms the branch point algorithm described in the paper
     def bp1(self, sol_grid=None, depth=0, max_depth=None):
-        print(depth)
         if sol_grid == None:
             sol_grid = self.base
         if (max_depth != None and depth == max_depth):
-            return
+            return 
         bp_loc = self.place_bp(sol_grid)
         if (bp_loc == None) or (bp_loc == -1):
-            return
+            return 
+        
         sect1, sect2, sect3 = self.create_sectors1(sol_grid)
-            
         self.bp1(sol_grid=sect1, depth=depth+1, max_depth=max_depth)
         self.bp1(sol_grid=sect2, depth=depth+1, max_depth=max_depth)
         self.bp1(sol_grid=sect3, depth=depth+1, max_depth=max_depth)
         
+        if depth == 0:
+            print('Done, graphing now')
         
     
         
 
-
-jeff = Sol_tree(np.pi/2, 2.5, 2, 0.2)
-jeff.bp1()
-# vis.plot_grid_rho(jeff.base)
-vis.plot_grid_pdisc(jeff.base)
+if __name__ == '__main__':
+    jeff = Sol_tree(np.pi/2, 2.5, 4, 0.4/2)
+    jeff.bp1()
+    vis.plot_grid_pdisc(jeff.base, plt_bps=True)
+    vis.plot_grid_rho(jeff.base)
 
 
 

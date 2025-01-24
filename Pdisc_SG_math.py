@@ -9,6 +9,7 @@ the Poincare disk
 
 import numpy as np
 
+
 # Returns 2x2 rotation matrix using angle phi
 def rot(phi):
     return np.array([[np.cos(phi), -np.sin(phi)],[np.sin(phi), np.cos(phi)]])
@@ -33,7 +34,7 @@ def w12_comp(w1, w2):
     return num / denom
 
 
-# Gets the approx angle for the Sin-Gordon equation
+# Computes the norm of w
 def norm(w):
     return np.sqrt(w[0]**2 + w[1]**2 )
 
@@ -46,6 +47,6 @@ def angle(w1,w2):
 
 # Computes geodesic distance of a point from the origin
 def geo_dist(w):
-    return 2*np.arctan(norm(w))
+    return 2*np.arctanh(norm(w))
 
 
