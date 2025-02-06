@@ -217,15 +217,15 @@ class Sol_tree:
         self.bp1(sol_grid=sect3, depth=depth+1, max_depth=max_depth)
         
         if depth == 0:
-            print('Done, graphing now')
+            print('Done placing branch points')
         
     
         
 
 if __name__ == '__main__':
-    jeff = Sol_tree(np.pi/2, 2.5, 4, 0.4/2)
+    jeff = Sol_tree(np.pi/2, 2.5, np.round(1+0.1*14,1), 0.1)
     jeff.bp1()
-    vis.plot_grid_pdisc(jeff.base, plt_bps=True)
+    vis.plot_grid_pdisc(jeff.base, plt_bps=True, save=True)
     vis.plot_grid_rho(jeff.base)
 
 
