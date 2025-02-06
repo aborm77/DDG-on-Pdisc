@@ -27,6 +27,8 @@ def plot_grid_pdisc(sol_grid, depth=0, fig=None, ax=None, bd_sect=False, plt_bps
         r2 = sol_grid.r2
         plt.xlim(-0.1, r1+0.11)
         plt.ylim(-0.1, r2+0.11)
+        # plt.xlim(-0.1, 1.10)
+        # plt.ylim(-0.1, 1.10)
         plt.xlabel('x')
         plt.ylabel('y')
         ax.set_aspect('equal')
@@ -40,6 +42,11 @@ def plot_grid_pdisc(sol_grid, depth=0, fig=None, ax=None, bd_sect=False, plt_bps
     else:
         x = sol_grid.grid[:,:,0]
         y = sol_grid.grid[:,:,1]
+        # avoids ploting branch points multiple times
+        if depth != 0:
+            x[0,0] = np.nan
+            y[0,0] = np.nan
+            
         
     # cycle through default colors each sector if plt_colors=True
     if plt_colors:

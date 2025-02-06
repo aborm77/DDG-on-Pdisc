@@ -8,8 +8,8 @@ import imageio.v3 as iio
 import os
 
 # If you are on windows remember to put '\\' for every \ in the directory
-im_dir = 'figs\\rad\\'
-gif_name = 'Change_rad'
+im_dir = 'figs\\cut_bps_bndry\\'
+gif_name = 'Change_cut_bps_bndry'
 dur = 135
 
 _, _, files = next(os.walk(im_dir))
@@ -17,4 +17,4 @@ file_count = len(files)
 images = []
 for i in range(file_count):
   images.append(iio.imread(im_dir + 'fig'+ str(i)+ '.png'))
-iio.imwrite(gif_name+'.gif', images, duration = dur, loop = 0)
+iio.imwrite('gifs//'+gif_name+'.gif', images, duration = dur, loop = 0)
