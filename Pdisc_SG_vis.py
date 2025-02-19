@@ -23,10 +23,13 @@ def plot_grid_pdisc(sol_grid, depth=0, fig=None, ax=None, bd_sect=False, plt_bps
         return
     if (depth == 0):
         fig, ax = plt.subplots()
-        r1 = sol_grid.r1
-        r2 = sol_grid.r2
-        plt.xlim(-0.1, r1+0.13)
-        plt.ylim(-0.1, r2+0.13)
+        # r1 = sol_grid.r1
+        # r2 = sol_grid.r2
+        # plt.xlim(-0.1, r1+0.13)
+        # plt.ylim(-0.1, r2+0.13)
+        rmax = sol_grid.rmax
+        plt.xlim(-0.1, rmax+0.14)
+        plt.ylim(-0.1, rmax+0.14)
         # plt.xlim(-0.1, 1.10)
         # plt.ylim(-0.1, 1.10)
         plt.xlabel('x')

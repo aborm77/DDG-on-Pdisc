@@ -8,8 +8,8 @@ import imageio.v3 as iio
 import os
 
 # If you are on windows remember to put '\\' for every \ in the directory
-im_dir = 'figs\\cut_bps_bndry\\'
-gif_name = 'Change_cut_bps_bndry'
+im_dir = 'figs\\cut_bp1\\'
+gif_name = 'Change_cut_bp1'
 dur = 135
 
 _, _, files = next(os.walk(im_dir))

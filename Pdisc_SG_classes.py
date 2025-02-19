@@ -33,6 +33,9 @@ class Sol_grid:
         self.children = None
         
         self.grid = self.grid_solve()     
+        rdiag = math_ddg.norm([self.grid[-1,-1,0], self.grid[-1,-1,1]])
+        self.rmax = np.max([self.r1, self.r2, rdiag])
+        
         
     # given boundary data on two rays creates a Chebyshev net on the Poincare disk
     # sol_grid stores x values of pts in [:,:,0], y values in [:,:,1], and the solution
@@ -137,8 +140,8 @@ class Sol_tree:
         if (vs < 0) or (us < 0):
             print('Error: inappropriate boundary data, branch point placement impossible')
             return -1
-        # if (vs == 0) or (us == 0):
-        #     print('Warning: branch point was placed on a boundary')
+        if (vs == 0) or (us == 0):
+            print('Warning: branch point was placed on a boundary')
         
         base_grid[:    , :vs + 1, :] = sol_grid.grid[:    , :vs + 1, :]
         base_grid[:us+1, vs+1:  , :] = sol_grid.grid[:us+1, vs+1:  , :]
@@ -164,6 +167,9 @@ class Sol_tree:
             bd = sol_grid.xbd
         diffs = np.full((len(bd),), rho_target)
         diffs = diffs - bd[:,2]
+        print('bnd')
+        print(diffs)
+        print('bnd')
         
         # this is looking for the node on the boundary with rho value closest 
         # to rho_target without exceeding rho_target
@@ -320,11 +326,15 @@ class Sol_tree:
         
 
 if __name__ == '__main__':
-    phi0 = np.pi/6
-    jeff = Sol_tree(phi0, 2.5, 5, 0.1)
-    jeff.bp2(3*phi0, max_depth=3)
+    # phi0 = np.pi/16
+    # jeff = Sol_tree(phi0, 2.5, 3, 0.1)
+    # jeff.bp2(3*phi0)
+    step = 0.1
+    i = 34
+    jeff = Sol_tree(np.pi/5, 2.5, np.round(1 + i*step,1), 0.1)
+    jeff.bp2(3 * np.pi/5)
     vis.plot_grid_pdisc(jeff.base, plt_bps=True, plt_bds=True)
-    vis.plot_grid_rho(jeff.base)
+    # vis.plot_grid_rho(jeff.base)
     
 
 
