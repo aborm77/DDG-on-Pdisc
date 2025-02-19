@@ -17,11 +17,12 @@ This class creates a cheby net on the p-disc given x- and y-boundary data
 and a maximal geodesic radius
 """
 class Sol_grid:
-    def __init__(self, xbd, ybd, parent, r):
+    def __init__(self, xbd, ybd, parent, r, ams):
         self.xbd = xbd
         self.ybd = ybd
         self.parent = parent
         self.r = r
+        self.ams = ams
         self.rows = self.ybd.shape[0]
         self.cols = self.xbd.shape[0]
         self.r1 = xbd[-1,0]
@@ -79,7 +80,7 @@ class Sol_tree:
         
         xbd = self.create_geo(0   , phi0, self.npts)
         ybd = self.create_geo(phi0, phi0, self.npts)
-        self.base = Sol_grid(xbd, ybd, 'base', self.r)
+        self.base = Sol_grid(xbd, ybd, 'base', self.r, 'ams')
         
         print('Initialized a solution tree with intial grid of size ' + str(self.npts) +'x' +  str(self.npts))
     
@@ -112,7 +113,7 @@ class Sol_tree:
     
     
     # place a branch point and return a solution grid representing the new L-shaped region
-    def place_bp(self, sol_grid):
+    def place_bp1(self, sol_grid):
         nan_ignore = np.ma.array(sol_grid.grid[:,:,2], mask=np.isnan(sol_grid.grid[:,:,2]))
         if np.all(nan_ignore < self.cutoff):
             return None
@@ -136,8 +137,8 @@ class Sol_tree:
         if (vs < 0) or (us < 0):
             print('Error: inappropriate boundary data, branch point placement impossible')
             return -1
-        if (vs == 0) or (us == 0):
-            print('Warning: branch point was placed on a boundary')
+        # if (vs == 0) or (us == 0):
+        #     print('Warning: branch point was placed on a boundary')
         
         base_grid[:    , :vs + 1, :] = sol_grid.grid[:    , :vs + 1, :]
         base_grid[:us+1, vs+1:  , :] = sol_grid.grid[:us+1, vs+1:  , :]
@@ -150,6 +151,84 @@ class Sol_tree:
             return
         
         return (us,vs)
+    
+    
+    # Finds the first node with asymptotic angle closest to rho_target 
+    # Searches starting from the origin and returns the largest index
+    # where the boundary data is less than rho_target 
+    # Current research suggests setting rho_target = 3 phi0
+    def bnd_find(self, sol_grid, rho_target):
+        if sol_grid.ams == 'ams1':
+            bd = sol_grid.ybd
+        if sol_grid.ams == 'ams3':
+            bd = sol_grid.xbd
+        diffs = np.full((len(bd),), rho_target)
+        diffs = diffs - bd[:,2]
+        
+        # this is looking for the node on the boundary with rho value closest 
+        # to rho_target without exceeding rho_target
+        for i in range(len(diffs)):
+            if diffs[i] < 0:
+                return i - 1
+            
+        # if this exacutes then the whole boundary has rho data < rho_target
+        return -1
+
+    
+    # Perfroms very similarly to bnd_find but this time searches the diagonal
+    # for the closest value to rho_target
+    def diag_find(self, sol_grid, rho_target):
+        diag = np.diagonal(sol_grid.grid[:,:,2])
+        diffs = np.full((len(diag),), rho_target)
+        diffs = diffs - diag
+        
+        for i in range(len(diffs)):
+            if diffs[i] < 0:
+                return i - 1
+            
+        return -1
+        
+    
+    # This implaments the branch point placement in the new procedure
+    def place_bp2(self, sol_grid, rho_target):
+        us = 0
+        vs = 0
+        if sol_grid.ams =='ams':
+            loc = self.diag_find(sol_grid, rho_target)
+            us = loc
+            vs = loc
+        if sol_grid.ams =='ams1':
+            us = self.bnd_find(sol_grid, rho_target)
+        if sol_grid.ams =='ams3':
+            vs = self.bnd_find(sol_grid, rho_target)
+            
+        # if this happens there is no need to place a branch point on the 
+        # boundary since all boundary data is < rho_target
+        if (us == -1) or (vs == -1):
+            return
+        
+        if (us == 0) and (vs == 0):
+            print('Warning, branch point placed at origin')
+            return
+        
+        rows = sol_grid.rows
+        cols = sol_grid.cols
+        base_grid = np.full((rows, cols, 3), np.nan)
+        
+        base_grid[:    , :vs + 1, :] = sol_grid.grid[:    , :vs + 1, :]
+        base_grid[:us+1, vs+1:  , :] = sol_grid.grid[:us+1, vs+1:  , :]
+        
+            
+        sol_grid.grid = base_grid
+        sol_grid.bp_loc = (us,vs)
+        
+        # still returning if our current grid has boundaries outside our 
+        # geodesic radius
+        if self.bndry_check(sol_grid):
+            return
+        
+        return (us,vs)
+        
     
     
     # Given a solution grid with a branch point already placed, creates the 
@@ -193,9 +272,9 @@ class Sol_tree:
             geo2[i,:2] = math_ddg.f(geo2[i,:2],z0)
             
         # solving on new grids
-        sect1 = Sol_grid(geo2, ax1, sol_grid, self.r)
-        sect2 = Sol_grid(geo1, geo2, sol_grid, self.r)
-        sect3 = Sol_grid(ax3, geo1, sol_grid, self.r)
+        sect1 = Sol_grid(geo2, ax1, sol_grid, self.r, 'ams1')
+        sect2 = Sol_grid(geo1, geo2, sol_grid, self.r, 'ams')
+        sect3 = Sol_grid(ax3, geo1, sol_grid, self.r, 'ams3')
         sol_grid.children = [sect1, sect2, sect3]
         
         return sect1, sect2, sect3
@@ -207,7 +286,7 @@ class Sol_tree:
             sol_grid = self.base
         if (max_depth != None and depth == max_depth):
             return 
-        bp_loc = self.place_bp(sol_grid)
+        bp_loc = self.place_bp1(sol_grid)
         if (bp_loc == None) or (bp_loc == -1):
             return 
         
@@ -218,15 +297,35 @@ class Sol_tree:
         
         if depth == 0:
             print('Done placing branch points')
+            
+    # preforms the new experimental branch point algorithm 
+    def bp2(self, rho_target, sol_grid=None, depth=0, max_depth=None):
+        if sol_grid == None:
+            sol_grid = self.base
+        if (max_depth != None and depth == max_depth):
+            return 
+        bp_loc = self.place_bp2(sol_grid, rho_target)
+        if bp_loc == None:
+            return 
+        
+        sect1, sect2, sect3 = self.create_sectors1(sol_grid)
+        self.bp2(rho_target, sol_grid=sect1, depth=depth+1, max_depth=max_depth)
+        self.bp2(rho_target, sol_grid=sect2, depth=depth+1, max_depth=max_depth)
+        self.bp2(rho_target, sol_grid=sect3, depth=depth+1, max_depth=max_depth)
+        
+        if depth == 0:
+            print('Done placing branch points')
         
     
         
 
 if __name__ == '__main__':
-    jeff = Sol_tree(np.pi/2, 2.5, np.round(1+0.1*14,1), 0.1)
-    jeff.bp1()
-    vis.plot_grid_pdisc(jeff.base, plt_bps=True, save=True)
+    phi0 = np.pi/6
+    jeff = Sol_tree(phi0, 2.5, 5, 0.1)
+    jeff.bp2(3*phi0, max_depth=3)
+    vis.plot_grid_pdisc(jeff.base, plt_bps=True, plt_bds=True)
     vis.plot_grid_rho(jeff.base)
+    
 
 
 
