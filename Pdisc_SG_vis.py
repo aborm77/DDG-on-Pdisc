@@ -109,4 +109,7 @@ def plot_grid_rho(sol_grid, depth=0, fig=None, ax=None):
             plot_grid_rho(child, depth+1, fig, ax)
             
 
+"""
+Functions for visualzing spherical Chebyshev net
+"""
 

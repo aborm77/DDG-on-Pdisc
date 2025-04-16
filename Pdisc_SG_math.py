@@ -8,6 +8,17 @@ the Poincare disk
 """
 
 import numpy as np
+from numpy.linalg import norm
+
+# householder reflection of a vector v through a plane with normal n
+def house(v, n):
+    return v - (2 * np.dot(v,n)) * n
+
+
+# Rodrigues formula for rotation of a vector, v, by ,a, radians, around a normal, n
+# rotates according to right hand rule
+def rod(v, n, a):
+    return (np.cos(a) * v) + (np.sin(a) * np.cross(n,v)) + (n *(np.dot(n,v)) * (1 - np.cos(a)))
 
 
 # Returns 2x2 rotation matrix using angle phi
@@ -35,14 +46,13 @@ def w12_comp(w1, w2):
 
 
 # Computes the norm of w
-def norm(w):
-    return np.sqrt(w[0]**2 + w[1]**2 )
+# def norm(w):
+#     return np.sqrt(w[0]**2 + w[1]**2 )
 
 
 # Computes the angle betwen two vectors using the dot product
 def angle(w1,w2):
-    dot = w1[0]*w2[0] + w1[1]*w2[1]
-    return np.arccos(dot / (norm(w1) * norm(w2)))
+    return np.arccos(np.dot(w1,w2) / (norm(w1) * norm(w2)))
 
 
 # Computes geodesic distance of a point from the origin
