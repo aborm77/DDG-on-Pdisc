@@ -6,8 +6,9 @@ Created on Sun Nov  3 11:22:20 2024
 Purpose: DDG solving of the Sine-Gordon equation on the Poincare disk
 """
 
+import matplotlib.pyplot as plt
+
 import numpy as np
-import pyvista as pv
 from numpy.linalg import norm
 
 import Pdisc_SG_math as math_ddg
@@ -17,11 +18,7 @@ import Pdisc_SG_vis as vis
 def angle(v1, v2):
     return np.arccos(np.dot(v1,v2) / (norm(v1) * norm(v2)))
 
-class Basic_grid:
-    def __init__(self, grid, children, bp_loc):
-        self.grid = grid
-        self.children = children
-        self.bp_loc = bp_loc
+
         
 
 """
@@ -404,33 +401,28 @@ class Sol_tree:
             print('Done placing branch points')
         
     
-class Norm_tree:
-    def __init__(self, sol_tree):
-        self.sep = np.arccos(1 / np.cosh(sol_tree.sep)) 
-        self.npts = sol_tree.npts
-        self.norms = np.zeros((self.npts,self.npts,3))
+    
+    
+class Norm_grid:
+    def __init__(self, sol_grid, parent, sep, b0=np.zeros(3), b1=np.zeros(3)):
+        self.angles = np.pi - np.copy(sol_grid.grid[:,:,2])
+        self.bp_loc = sol_grid.bp_loc
+        self.npts = sol_grid.npts
+        self.rows = sol_grid.rows
+        self.cols = sol_grid.cols
         
-        self.a_base = self.angle_clean(sol_tree.base)
-        pl = pv.Plotter()
-        self.grid_solve(sol_tree.base,pl)
-        pl.add_axes()
-        pl.show()
+        self.parent = parent
+        self.children = None
         
-    def angle_clean(self, sol_grid, depth=0):
-        a_grid = np.pi - np.copy(sol_grid.grid[:,:,2])
-        ag = Basic_grid(a_grid, sol_grid.children, sol_grid.bp_loc)
+        self.sep = sep
+        self.b0 = b0
+        self.b1 = b1
         
-        if (sol_grid.children != None):
-            for child in sol_grid.children:
-               self.angle_clean(child, depth=depth+1)
+        self.norms = np.zeros((self.rows,self.cols,3))
+        self.grid_solve()
+        self.angle_test()
         
-        if depth == 0:
-            return ag
-        
-        
-        
-    def solve(self, us, vs, pl, b0=np.zeros(3), b1=np.zeros(3)):
-        c = np.array([0,0,0])
+    def solve(self, us, vs):
         
         for j in range(vs):
             for i in range(us):
@@ -438,19 +430,17 @@ class Norm_tree:
                     if np.any(self.norms[0,0,:] != 0):
                         continue
                     
-                    if np.any(b0 != 0):
-                        n0 = b0
-                        n1 = b1
-                        
+                    if (np.any(self.b0 != 0)) and (np.any(self.b1 != 0)):
+                        n0 = self.b0
+                        n1 = self.b1     
                     else:
                         n0 = np.array([0,0,1])
-                        
                         e2 = np.array([0,1,0])
                         n1 = math_ddg.rod(n0, e2, self.sep)
                         n1 /= norm(n1)
                     
                     v1 = np.cross(n0,n1)
-                    v2 = math_ddg.rod(v1, n0, self.a_base.grid[0,0])
+                    v2 = math_ddg.rod(v1, n0, self.angles[0,0])
                     v2 /= norm(v2)
                     n2 = math_ddg.rod(n0, v2, self.sep)
                     
@@ -464,11 +454,6 @@ class Norm_tree:
                     self.norms[1,0,:] = n2
                     self.norms[1,1,:] = n12
                     
-                    pl.add_arrows(c, n0, mag=1, color='blue')
-                    pl.add_arrows(c, n1, mag=1, color='black')
-                    pl.add_arrows(c, n2, mag=1, color='red')
-                    pl.add_arrows(c, n12, mag=1, color='green')
-                    
                 elif (j==0): 
                     if np.any(self.norms[i+1, j, :] != 0):
                         continue
@@ -477,7 +462,7 @@ class Norm_tree:
                     n1 = self.norms[i,j+1,:]
                     
                     v1 = np.cross(n0,n1)
-                    v2 = math_ddg.rod(v1, n0, self.a_base.grid[i,j])
+                    v2 = math_ddg.rod(v1, n0, self.angles[i,j])
                     v2 /= norm(v2)
                     n2 = math_ddg.rod(n0, v2, self.sep)
                     
@@ -489,9 +474,6 @@ class Norm_tree:
                     self.norms[i+1,   j, :] = n2
                     self.norms[i+1, j+1, :] = n12
                     
-                    pl.add_arrows(c, n2, mag=1, color='cyan')
-                    pl.add_arrows(c, n12, mag=1, color='purple')
-                    
                 elif (i==0):
                     if np.any(self.norms[i, j+1, :] != 0):
                         continue
@@ -500,7 +482,7 @@ class Norm_tree:
                     n2 = self.norms[i+1, j]
                     
                     v1 = np.cross(n2, n0)
-                    v2 = math_ddg.rod(v1, n0, -self.a_base.grid[i,j])
+                    v2 = math_ddg.rod(v1, n0, -self.angles[i,j])
                     v2 /= norm(v2)
                     
                     n1 = math_ddg.rod(n0, v2, -self.sep)
@@ -512,9 +494,6 @@ class Norm_tree:
                     
                     self.norms[i  , j+1, :] = n1
                     self.norms[i+1, j+1, :] = n12
-                    
-                    pl.add_arrows(c, n1, mag=1, color='cyan')
-                    pl.add_arrows(c, n12, mag=1, color='purple')
                     
                 else: 
                     if np.any(self.norms[i+1, j+1, :] != 0):
@@ -530,35 +509,94 @@ class Norm_tree:
                     n12 /= norm(n12)
                 
                     self.norms[i+1, j+1, :] = n12
-                    if j % 2 == 0:
-                        pl.add_arrows(c, n12, mag=1, color='purple')
-                    else:
-                        pl.add_arrows(c, n12, mag=1, color='orange')   
 
-        
-    def grid_solve(self, sol_grid, pl, depth=0, b1=0, b2=0):
-        
-        if self.a_base.bp_loc == None:
-            if depth == 0:
-                self.solve(self.npts - 1, self.npts - 1, pl)
-            else:
-                self.solve(self.npts - 1, self.npts - 1, pl)
+    def grid_solve(self):
+        if self.bp_loc == None:
+            self.solve(self.rows - 1, self.cols - 1)
         else:
-            us, vs = self.a_base.bp_loc
-            if depth == 0:
-                self.solve(us, self.npts - 1, pl)
-                self.solve(self.npts - 1, vs, pl)
+            us, vs = self.bp_loc
+            # dealing with a degenerate but very possible case
+            if us == 0 and vs==0:
+                # just solving for the boundary
+                self.solve(1, self.cols - 1)
+                self.solve(self.rows - 1, 1)
+                self.norms[1,1:,:] = 0
+                self.norms[1:,1,:] = 0
             else:
-                pass
-            
-        if (sol_grid.children != None):
-            for child in sol_grid.children:
-               self.grid_solve(child, pl, depth=depth+1)
+                self.solve(us, self.cols - 1)
+                self.solve(self.rows - 1, vs)
+
+    def angle_test(self):
+        # first checking to see if angles match what they should be in a_grid 
+        quad_angles = np.zeros((self.rows - 1, self.cols - 1, 4))
+        for i in range(self.rows - 1):
+            for j in range(self.cols - 1):
+                n0 =  self.norms[i  , j  , :]
+                n1 =  self.norms[i  , j+1, :]
+                n2 =  self.norms[i+1, j  , :]
+                n12 = self.norms[i+1, j+1, :]
+                if np.any(n0 != 0) and np.any(n1 != 0) and np.any(n2 != 0) and np.any(n12 != 0):
+                    v1 = np.cross(n1, n0)
+                    v2 = np.cross(n2, n0)
+                    a = angle(v1, v2) 
+                    a_diff = np.abs(angle(v1, v2) - self.angles[i,j])
+                    
+                    
+                    # print('Actual angle:', a)
+                    # print('a_grid angle:', self.a_base.grid[i,j])
+                    if a_diff > 1e-8:
+                        print('Warning! Some of the angles are incorrect')
+                        print('Angle at '+'('+str(i)+','+str(j)+')'+' is wrong')
+                        print('Actual angle:', a)
+                        print('a_grid angle:', self.angles[i,j])
+                         
+                    
+                    v1 = np.cross(n1, n0)
+                    v2 = np.cross(n2, n0)
+                    a0 = angle(v1, v2)
+                    
+                    v1 = np.cross(n1, n0)
+                    v2 = np.cross(n1, n12)
+                    a1 = angle(v1, v2)
+                    
+                    v1 = np.cross(n2, n0)
+                    v2 = np.cross(n2, n12)
+                    a2 = angle(v1, v2)
+                    
+                    v1 = np.cross(n12, n1)
+                    v2 = np.cross(n12, n2)
+                    a12 = angle(v1, v2)
+                    
+                    quad_angles[i,j,:] = [a0, a1, a2, a12]
+                    A = - 2 * np.pi + (a0 + a1 + a2 + a12)
         
-        if depth == 0:
-            return 0
-            
-       
+    
+class Norm_tree:
+    def __init__(self, sol_tree):
+        self.sep = np.arccos(1 / np.cosh(sol_tree.sep)) 
+        self.npts = sol_tree.npts
+        self.norms_base = Norm_grid(sol_tree.base, 'base', self.sep)
+        
+        self.create_tree(sol_tree.base, self.norms_base)
+        
+
+    def create_tree(self, sol_grid, parent, depth=0):
+        if sol_grid.bp_loc == None:
+            return
+        
+        us, vs = sol_grid.bp_loc
+        sol_children = sol_grid.children
+        
+        ng3 = Norm_grid(sol_children[2], parent, self.sep, b0=parent.norms[us,vs,:], b1=parent.norms[us,vs+1,:])
+        ng2 = Norm_grid(sol_children[1], parent, self.sep, b0=ng3.norms[0,0,:], b1=ng3.norms[1,0,:])
+        ng1 = Norm_grid(sol_children[0], parent, self.sep, b0=ng2.norms[0,0,:], b1=ng2.norms[1,0,:])
+        
+        norm_children = [ng1, ng2, ng3]
+        parent.children = norm_children
+        
+        for i in range(3):
+            self.create_tree(sol_children[i], norm_children[i], depth=depth+1)
+
         
     def sep_test(self):
         for i in range(self.npts - 1):
@@ -598,51 +636,13 @@ class Norm_tree:
                     print('Issue found on quad with n0 at '+'('+str(i)+','+str(j)+')')
                     
                     
-    def angle_test(self):
-        # first checking to see if angles match what they should be in a_grid 
-        quad_angles = np.zeros((self.npts - 1, self.npts - 1, 4))
-        for i in range(self.npts - 1):
-            for j in range(self.npts - 1):
-                n0 =  self.norms[i  , j  , :]
-                n1 =  self.norms[i  , j+1, :]
-                n2 =  self.norms[i+1, j  , :]
-                n12 = self.norms[i+1, j+1, :]
-                
-                v1 = np.cross(n1, n0)
-                v2 = np.cross(n2, n0)
-                a = angle(v1, v2) 
-                a_diff = np.abs(angle(v1, v2) - self.a_base.grid[i,j])
-                
-                
-                # print('Actual angle:', a)
-                # print('a_grid angle:', self.a_base.grid[i,j])
-                if a_diff > 1e-8:
-                    print('Warning! Some of the angles are incorrect')
-                    print('Angle at '+'('+str(i)+','+str(j)+')'+' is wrong')
-                    print('Actual angle:', a)
-                    print('a_grid angle:', self.a_base.grid[i,j])
-                     
-                
-                v1 = np.cross(n1, n0)
-                v2 = np.cross(n2, n0)
-                a0 = angle(v1, v2)
-                
-                v1 = np.cross(n1, n0)
-                v2 = np.cross(n1, n12)
-                a1 = angle(v1, v2)
-                
-                v1 = np.cross(n2, n0)
-                v2 = np.cross(n2, n12)
-                a2 = angle(v1, v2)
-                
-                v1 = np.cross(n12, n1)
-                v2 = np.cross(n12, n2)
-                a12 = angle(v1, v2)
-                
-                quad_angles[i,j,:] = [a0, a1, a2, a12]
-                A = - 2 * np.pi + (a0 + a1 + a2 + a12)
-        
     
+class Surf_tree:
+    def __init__(self, norm_tree):
+        self.npts = norm_tree.npts
+        # self.norms_base = Norm_grid(sol_tree.base, 'base', self.sep)
+        
+        # self.create_tree(sol_tree.base, self.norms_base)
 
 
 if __name__ == '__main__':
@@ -652,9 +652,19 @@ if __name__ == '__main__':
     step = 0.1
     i = 34
     jeff = Sol_tree(np.pi/2, 2.5, 2, 2/10)
-    jeff.bp1(max_depth=1)
+    jeff.bp1()
     vis.plot_grid_pdisc(jeff.base, plt_bps=True, plt_bds=True)
+    # vis.plot_grid_rho(jeff.base)
+    
     norman = Norm_tree(jeff)
+    # vis.Norm_plot(norman.norms_base, plt_bps=True, plt_bds=True)
+    vis.Arc_plot(norman.norms_base, plt_bps=True, plt_bds=True, depth_dis=True)
+    
+    # print(norman.norms_base.children[0].children[0].norms[:,:,0])
+    # print(norman.norms_base.children[2].children[2].norms[:,:,0])
+    # print(norman.norms_base.children[0].bp_loc)
+    # print(norman.norms_base.children[2].bp_loc)
+    # vis.plot_norm_arrows(norman.norms_base, plt_bps=True, plt_bds=True)
     # norman.sep_test()
     # norman.norm_test()
     # norman.angle_test()
