@@ -139,8 +139,8 @@ class Norm_plot:
         if self.plt_bds:
             lb = 1
         
-        for i in range(lb, norm_grid.npts):
-            for j in range(lb, norm_grid.npts):
+        for i in range(lb, norm_grid.rows):
+            for j in range(lb, norm_grid.cols):
                 n = norm_grid.norms[i,j,:]
                 if np.any(n!=0):
                     self.pl.add_arrows(c, n, mag=1, color='cyan', opacity=0.8)
@@ -284,7 +284,103 @@ class Arc_plot:
                 self.plot_bps(child, depth=depth+1)
                     
                     
-    
+class Surf_plot:
+    def __init__(self, surf_grid, plt_bps=False, plt_bds=False, depth_dis=False):
+        self.grid = surf_grid.grid
+        
+        self.pl = pv.Plotter()
+        
+        self.poly_plot(surf_grid)
+        
+        self.pl.add_axes()
+        self.pl.show()
+        
+    def create_pt_ar(self, surf_grid):
+        
+        pts = []
+        for i in range(surf_grid.rows):
+            for j in range(surf_grid.cols):
+                r = surf_grid.grid[i,j,:]
+                if not (np.any(np.isnan(r))):
+                    pts.append(r)
+        return pts
+        
+        
+    def create_pt_map(self, surf_grid):
+        
+        pt_map = {}
+        n = 0
+        for i in range(surf_grid.rows):
+            for j in range(surf_grid.cols):
+                r = surf_grid.grid[i,j,:]
+                if not (np.any(np.isnan(r))):
+                    pt_map[r.tobytes()] = n
+                    n+=1
+                
+        return pt_map
+        
+                
+    def poly_plot(self, surf_grid, depth=0):
+        
+        verts = self.create_pt_ar(surf_grid)
+        pt_map = self.create_pt_map(surf_grid)
+        
+        faces = []
+        grid = surf_grid.grid 
+
+        for i in range(surf_grid.rows-1):
+            for j in range(surf_grid.cols-1):
+                
+                r0 =  grid[i  ,j  ,:]
+                r1 =  grid[i  ,j+1,:]
+                r2 =  grid[i+1,j  ,:]
+                r12 = grid[i+1,j+1,:]
+                
+                # if depth == 0:
+                #     us,vs = surf_grid.bp_loc
+                #     bp = grid[us,vs,:]
+                #     bp1 = grid[us+1,vs,:]
+                #     cloud2 = pv.PolyData([bp, bp1])
+                #     self.pl.add_mesh(cloud2, vertex_color='r', render_points_as_spheres=True, show_vertices=True,
+                #         point_size=10)
+                
+                if i == 0 and j == 0 and depth !=0:
+                    cloud2 = pv.PolyData([r0, r1, r2])
+                    self.pl.add_mesh(cloud2, show_edges=True, line_width=1, vertex_color='r',
+                        render_points_as_spheres=True, show_vertices=True,
+                        point_size=10)
                     
+                
+                # if surf_grid.bp_loc != None:
+                #     us,vs = surf_grid.bp_loc
+                #     cloud = pv.PolyData([grid[us,vs,:], grid[us+1,vs,:]])
+                #     self.pl.add_mesh(cloud, vertex_color='r', render_points_as_spheres=True, show_vertices=True,
+                #         point_size=10)
+                
+                if not(np.any(np.isnan(r0)) or np.any(np.isnan(r1)) or np.any(np.isnan(r2)) or np.any(np.isnan(r12))):
+                    faces.append([4, pt_map[r0.tobytes()], pt_map[r1.tobytes()], pt_map[r12.tobytes()], pt_map[r2.tobytes()]])
                     
+        surf = pv.PolyData(verts, faces)
+        
+        self.pl.add_mesh(surf, show_edges=True, line_width=1, vertex_color='r')
+        
+        if surf_grid.children != None:
+            self.poly_plot(surf_grid.children[2], depth=depth+1)
+            self.poly_plot(surf_grid.children[0], depth=depth+1)
+            self.poly_plot(surf_grid.children[1], depth=depth+1)
+            # for child in surf_grid.children:
+            #     self.poly_plot(child, depth=depth+1)
+            #     break
+        
+        
+    def delaunay_plot(self, surf_grid):
+        
+        pts = []
+        for i in range(len(self.grid)):
+            for j in range(len(self.grid)):
+                pts.append(self.grid[i,j,:])
+        
+        cloud = pv.PolyData(pts)
+        surf = cloud.delaunay_2d()
+        self.pl.add_mesh(surf, show_edges=True)
                     

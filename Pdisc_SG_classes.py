@@ -400,6 +400,9 @@ class Sol_tree:
         if depth == 0:
             print('Done placing branch points')
         
+    # removes points outside the geodesic radius
+    def grid_clean(self):
+        pass
     
     
     
@@ -581,11 +584,12 @@ class Norm_tree:
         
 
     def create_tree(self, sol_grid, parent, depth=0):
-        if sol_grid.bp_loc == None:
+        if sol_grid.bp_loc == None or sol_grid.children == None:
             return
         
         us, vs = sol_grid.bp_loc
         sol_children = sol_grid.children
+        
         
         ng3 = Norm_grid(sol_children[2], parent, self.sep, b0=parent.norms[us,vs,:], b1=parent.norms[us,vs+1,:])
         ng2 = Norm_grid(sol_children[1], parent, self.sep, b0=ng3.norms[0,0,:], b1=ng3.norms[1,0,:])
@@ -636,13 +640,134 @@ class Norm_tree:
                     print('Issue found on quad with n0 at '+'('+str(i)+','+str(j)+')')
                     
                     
-    
+class Surf_grid:
+    def __init__(self, norm_grid, parent, b0=np.full(3,np.nan), b1=np.full(3,np.nan), b2=np.full(3,np.nan), check=False):
+        self.rows = norm_grid.rows
+        self.cols = norm_grid.cols
+        self.grid = np.full((self.rows, self.cols,3),np.nan)
+        self.norms = norm_grid.norms
+        
+        self.check = check
+        if check:
+            temp = np.copy(self.norms)
+            self.norms[:,:,0] = temp[:,:,0].T
+            self.norms[:,:,1] = temp[:,:,1].T
+            self.norms[:,:,2] = temp[:,:,2].T
+        
+        self.bp_loc = norm_grid.bp_loc
+        self.b0 = b0
+        self.b1 = b1
+        self.b2 = b2
+        
+        self.parent = parent
+        self.children = None
+        
+        self.grid_solve()
+        
+    def solve(self, us, vs):
+        
+        for i in range(us):
+            for j in range(vs):
+                n0 =  self.norms[i  , j  ,:]
+                n1 =  self.norms[i  , j+1,:]
+                n2 =  self.norms[i+1, j  ,:]
+                n12 = self.norms[i+1, j+1,:]
+                
+                if i == 0 and j ==0:
+                    if not (np.any(np.isnan(self.b0))):
+                        r0 = self.b0    
+                    else:
+                        r0 = np.zeros(3)
+                        
+                    if not (np.any(np.isnan(self.b1))):
+                        r1 = self.b1
+                    else:
+                        r1 = r0 + np.cross(n1,n0)
+                        
+                    if not (np.any(np.isnan(self.b1))):
+                        r2 = self.b2
+                    else:
+                        r2 = r0 - np.cross(n2,n0)
+                   
+                    r12 = r1 - np.cross(n12,n1)
+                    
+                    self.grid[i  , j  ,:] = r0
+                    self.grid[i  , j+1,:] = r1
+                    self.grid[i+1, j  ,:] = r2
+                    self.grid[i+1, j+1,:] = r12
+                    
+                elif j == 0:
+                    r0 = self.grid[i,j,:]
+                    r2 = r0 - np.cross(n2,n0)
+                    r12 = r2 + np.cross(n12,n2)
+                    
+                    self.grid[i+1, j  ,:] = r2
+                    self.grid[i+1, j+1,:] = r12
+                    
+                elif i == 0:
+                    r0 = self.grid[i,j,:]
+                    r1 = r0 + np.cross(n1,n0)
+                    r12 = r1 - np.cross(n12,n1)
+                    
+                    self.grid[i  , j+1,:] = r1
+                    self.grid[i+1, j+1,:] = r12
+                    
+                else:
+                    r1 = self.grid[i, j+1,:]
+                    r12 = r1 - np.cross(n12,n1)
+                    
+                    self.grid[i+1, j+1,:] = r12
+                    
+    def grid_solve(self):
+        if self.bp_loc == None:
+            self.solve(self.rows - 1, self.cols - 1)
+        else:
+            us, vs = self.bp_loc
+            self.solve(us, self.cols - 1)
+            self.solve(self.rows - 1, vs)
+            # dealing with a degenerate but very possible case
+            # if us == 0 and vs==0:
+            #     # just solving for the boundary
+            #     self.solve(1, self.cols - 1)
+            #     self.solve(self.rows - 1, 1)
+            #     self.norms[1,1:,:] = 0
+            #     self.norms[1:,1,:] = 0
+            # else:
+            #     self.solve(us, self.cols - 1)
+            #     self.solve(self.rows - 1, vs)
+            
+                    
+                    
+                
 class Surf_tree:
     def __init__(self, norm_tree):
         self.npts = norm_tree.npts
+        self.base = Surf_grid(norm_tree.norms_base, 'base')
         # self.norms_base = Norm_grid(sol_tree.base, 'base', self.sep)
         
-        # self.create_tree(sol_tree.base, self.norms_base)
+        self.create_tree(norm_tree.norms_base, self.base)
+        
+    def create_tree(self, norm_grid, parent, depth=0):
+        if norm_grid.bp_loc == None or norm_grid.children == None:
+            return
+        
+        us, vs = norm_grid.bp_loc
+        sol_children = norm_grid.children
+        
+        # , b2=parent.grid[us,vs+1,:]
+        # , b2=parent.grid[us+1,vs,:]S
+        # b0=parent.grid[us,vs,:], b1=sg1.grid[0,1,:], b2=sg3.grid[1,0,:]
+        pc = parent.check
+        
+        sg3 = Surf_grid(sol_children[2], parent, b0=parent.grid[us,vs,:], check=pc)
+        sg2 = Surf_grid(sol_children[1], parent, b0=parent.grid[us,vs,:], check=not pc)
+        sg1 = Surf_grid(sol_children[0], parent, b0=parent.grid[us,vs,:], check=pc)
+        
+        surf_children = [sg1, sg2, sg3]
+        parent.children = surf_children
+        
+        for i in range(3):
+            self.create_tree(sol_children[i], surf_children[i], depth=depth+1)
 
 
 if __name__ == '__main__':
@@ -651,14 +776,17 @@ if __name__ == '__main__':
     # jeff.bp2(3*phi0)
     step = 0.1
     i = 34
-    jeff = Sol_tree(np.pi/2, 2.5, 2, 2/10)
-    jeff.bp1()
+    jeff = Sol_tree(np.pi/2, 2.5, 1.25, .05)
+    jeff.bp1(max_depth=1)
     vis.plot_grid_pdisc(jeff.base, plt_bps=True, plt_bds=True)
     # vis.plot_grid_rho(jeff.base)
     
     norman = Norm_tree(jeff)
     # vis.Norm_plot(norman.norms_base, plt_bps=True, plt_bds=True)
-    vis.Arc_plot(norman.norms_base, plt_bps=True, plt_bds=True, depth_dis=True)
+    # vis.Arc_plot(norman.norms_base, plt_bps=True, plt_bds=True, depth_dis=True)
+    
+    sherman = Surf_tree(norman)
+    vis.Surf_plot(sherman.base)
     
     # print(norman.norms_base.children[0].children[0].norms[:,:,0])
     # print(norman.norms_base.children[2].children[2].norms[:,:,0])
