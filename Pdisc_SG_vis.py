@@ -19,7 +19,9 @@ def geo_circ(r):
     
 
 # function to plot the points on the pdisc
-def plot_grid_pdisc(sol_grid, depth=0, fig=None, ax=None, bd_sect=False, plt_bps=False, plt_colors=False, plt_bds=False, save=False, f_name=None, pt_size=10):
+def plot_grid_pdisc(sol_grid, depth=0, fig=None, ax=None, bd_sect=False, 
+                    plt_bps=False, plt_colors=False, plt_bds=False, save=False, 
+                    f_name=None, uv_lines=False, pt_size=10, rev=False):
     if (sol_grid == None):
         return
     if (depth == 0):
@@ -40,31 +42,50 @@ def plot_grid_pdisc(sol_grid, depth=0, fig=None, ax=None, bd_sect=False, plt_bps
         ax.plot(circ_x, circ_y, c='black', zorder=0)
         
     # avoids ploting points on the boundry of sectors twice
-    if bd_sect:
+    if bd_sect and not uv_lines:
         x = sol_grid.grid[1:,1:,0]
         y = sol_grid.grid[1:,1:,1]
     else:
         x = sol_grid.grid[:,:,0]
         y = sol_grid.grid[:,:,1]
         # avoids ploting branch points multiple times
-        if depth != 0:
+        if depth != 0 and not uv_lines:
             x[0,0] = np.nan
             y[0,0] = np.nan
             
         
     # cycle through default colors each sector if plt_colors=True
-    if plt_colors:
-        ax.scatter(x, y, alpha=0.5,  zorder=1, s=pt_size)
-    else:
-        ax.scatter(x, y, alpha=0.5, c='C0',  zorder=1, s=pt_size)
+    if not uv_lines:
+        if plt_colors:
+            ax.scatter(x, y, alpha=0.5,  zorder=1, s=pt_size)
+        else:
+            ax.scatter(x, y, alpha=0.5, c='C0',  zorder=1, s=pt_size)
+        
+    if uv_lines:
+        c1 = 'red'
+        c2 = 'blue'
+        z = 2
+        if rev:
+            c1 = 'blue'
+            c2 = 'red'
+            z=1
+        for i in range(len(x[0,:])):
+            ax.plot(x[:,i],y[:,i], c=c1, zorder=z%2)
+        for i in range(len(x[:,0])):
+            ax.plot(x[i,:],y[i,:], c=c2, zorder=(z+1)%2)
+        
     
     if (sol_grid.children != None):
         i = 0
         for child in sol_grid.children:
             if i % 2 != 0:
-                plot_grid_pdisc(child, depth+1, fig, ax, plt_bps=plt_bps, plt_colors=plt_colors, plt_bds=plt_bds, pt_size=pt_size)
+                plot_grid_pdisc(child, depth+1, fig, ax, plt_bps=plt_bps, 
+                                plt_colors=plt_colors, plt_bds=plt_bds, 
+                                pt_size=pt_size, uv_lines=uv_lines, rev=not rev)
             else:
-                plot_grid_pdisc(child, depth+1, fig, ax, bd_sect=True, plt_bps=plt_bps, plt_colors=plt_colors, plt_bds=plt_bds, pt_size=pt_size)
+                plot_grid_pdisc(child, depth+1, fig, ax, bd_sect=bd_sect, 
+                                plt_bps=plt_bps, plt_colors=plt_colors, 
+                                plt_bds=plt_bds, pt_size=pt_size, uv_lines=uv_lines, rev=rev)
             i += 1
             
     # plots branch points if plt_bps = True
@@ -89,6 +110,7 @@ def plot_grid_pdisc(sol_grid, depth=0, fig=None, ax=None, bd_sect=False, plt_bps
         plt.close()
     if depth == 0 and not save:
         plt.show()
+    
     
 # function to plot the values of rho (as a surface graph)     
 def plot_grid_rho(sol_grid, depth=0, fig=None, ax=None):
