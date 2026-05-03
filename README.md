@@ -7,16 +7,21 @@ Create and visualize discrete analouges of surfaces with constant negative Gauss
 
 and
 
-> **“Distributed Branch Points and the Shape of Elastic Surfaces with Constant Negative Curvature”
+> ** "Distributed Branch Points and the Shape of Elastic Surfaces with Constant Negative Curvature"**
 > Toby L. Shearman and Shankar C. Venkataramani, *Journal of Nonlinear Science*, vol. 31, no. 1, p. 13, Jan 2021.
 > Available: https://doi.org/10.1007/s00332-020-09657-2
 
-## Theory
+## Smooth Theory
 
 Why do certain strange, cruly, crenelated shapes appear in nature? We hypothesize that surfaces in nature are approximately minimizing elastic engergy
 and model this via an elastic energy functional
 
-$$ E[y] = \int_{\Omega} \kappa_1^2 + \kappa_2^2 dA .$$
+$$ \mathcal{E}_2[r] = \begin{cases}
+    \int (\kappa_1^2 + \kappa_2^2) dA \text{ if }y\in W^{2,2}, \, dr\cdot dr=g\\
+    + \infty, \text{ else.}
+    \end{cases} $$
 
-where $y:\Omega \to \mathbb{R}^3$ is a surface, $\kappa_1$, $\kappa_2$ are the principle curvatures, and $g$ is the target metric. It appears that minimizers of this
-functional are non-smooth ($C^{1,1}$ or even less regular)! Therefore the normal Euler-Lagrange approach is insufficent.  
+where $r:\Omega \to \mathbb{R}^3$ is a surface, $\kappa_1$, $\kappa_2$ are the principle curvatures, and $g$ is the target metric. In particular, curly surfaces have a boundary that is exponetially increasing with their radius. Hence a natural choice for $g$ is a hyberbolic metric. We choose to study surfaces with constant negative Gaussian curvature equal to $-1$. It appears that minimizers of this functional are non-smooth ($C^{1,1}$ or even less regular)! Therefore the normal Euler-Lagrange approach is insufficent. 
+
+## Discrete Differntial Geometric Approach
+
