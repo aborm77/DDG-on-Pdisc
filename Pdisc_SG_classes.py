@@ -45,9 +45,10 @@ class Sol_grid:
         rdiag = math_ddg.norm([self.grid[-1,-1,0], self.grid[-1,-1,1]])
         self.rmax = np.max([self.r1, self.r2, rdiag])
         
+        self.old_grid = None
         
-        self.angle_test()
-        self.sep_test()
+        # self.angle_test()
+        # self.sep_test()
         
         
     # given boundary data on two rays creates a Chebyshev net on the Poincare disk
@@ -280,8 +281,10 @@ class Sol_tree:
             vs = loc
         if sol_grid.ams =='ams1':
             us = self.bnd_find(sol_grid, rho_target)
+            sol_grid.old_grid = np.copy(sol_grid.grid)
         if sol_grid.ams =='ams3':
             vs = self.bnd_find(sol_grid, rho_target)
+            sol_grid.old_grid = np.copy(sol_grid.grid)
             
         # if this happens there is no need to place a branch point on the 
         # boundary since all boundary data is < rho_target
@@ -296,8 +299,15 @@ class Sol_tree:
         cols = sol_grid.cols
         base_grid = np.full((rows, cols, 3), np.nan)
         
-        base_grid[:    , :vs + 1, :] = sol_grid.grid[:    , :vs + 1, :]
-        base_grid[:us+1, vs+1:  , :] = sol_grid.grid[:us+1, vs+1:  , :]
+
+        
+        if not (us == 0 or vs == 0):
+            base_grid[:    , :vs + 1, :] = sol_grid.grid[:    , :vs + 1, :]
+            base_grid[:us+1, vs+1:  , :] = sol_grid.grid[:us+1, vs+1:  , :]
+        if vs == 0:
+            base_grid[:us + 1, :, :] = sol_grid.grid[:us + 1, :, :]  
+        if us == 0:
+            base_grid[:, :vs + 1, :] = sol_grid.grid[:, :vs + 1, :]   
         
             
         sol_grid.grid = base_grid
@@ -328,14 +338,28 @@ class Sol_tree:
         sect2 = np.zeros((max_len,max_len,3))
         sect3 = np.zeros((ax3_len,ax3_len,3))
         
-        ax1 = np.copy(sol_grid.grid[us:,vs,:])
-        ax3 = np.copy(sol_grid.grid[us,vs:,:])
+        if vs != 0 and us!=0:
+            ax1 = np.copy(sol_grid.grid[us:,vs,:])
+            ax3 = np.copy(sol_grid.grid[us,vs:,:])
+        if vs == 0:
+            ax1 = np.copy(sol_grid.old_grid[us:,vs,:])
+            ax3 = np.copy(sol_grid.grid[us,vs:,:])
+        if us == 0:
+            ax1 = np.copy(sol_grid.grid[us:,vs,:])
+            ax3 = np.copy(sol_grid.old_grid[us,vs:,:])
+            
+        
         ax1[:,2] = ax1[:,2] - 2 * bp_val
         ax3[:,2] = ax3[:,2] - 2 * bp_val
         
-        z2 = sol_grid.grid[us+1, vs ,:2]
-        z0 = sol_grid.grid[us  ,vs  ,:2]
-        z1 = sol_grid.grid[us  ,vs+1,:2]
+        if type(sol_grid.old_grid) != type(None):
+            z2 = sol_grid.old_grid[us+1, vs ,:2]
+            z0 = sol_grid.old_grid[us  ,vs  ,:2]
+            z1 = sol_grid.old_grid[us  ,vs+1,:2]
+        else: 
+            z2 = sol_grid.grid[us+1, vs ,:2]
+            z0 = sol_grid.grid[us  ,vs  ,:2]
+            z1 = sol_grid.grid[us  ,vs+1,:2]
    
         w2 = math_ddg.f(z2,-z0)
         w1 = math_ddg.f(z1,-z0)
@@ -346,23 +370,27 @@ class Sol_tree:
         phi1 = (2*arg1 + arg2) / 3
         phi2 = (arg1 + 2*arg2) / 3
         
+        
         geo1 = self.create_geo(phi1, bp_val, max_len)
         geo2 = self.create_geo(phi2, bp_val, max_len)
         for i in range(max_len):
             geo1[i,:2] = math_ddg.f(geo1[i,:2],z0)
             geo2[i,:2] = math_ddg.f(geo2[i,:2],z0)
-            
+        
         # solving on new grids
         sect1 = Sol_grid(geo2, ax1, sol_grid, self.r, 'ams1')
         sect2 = Sol_grid(geo1, geo2, sol_grid, self.r, 'ams')
         sect3 = Sol_grid(ax3, geo1, sol_grid, self.r, 'ams3')
         sol_grid.children = [sect1, sect2, sect3]
         
+        
         return sect1, sect2, sect3
+
         
         
     # preforms the branch point algorithm described in the paper
     def bp1(self, sol_grid=None, depth=0, max_depth=None):
+        
         if sol_grid == None:
             sol_grid = self.base
         if (max_depth != None and depth == max_depth):
@@ -435,12 +463,29 @@ class Mask_tree:
     
     
 class Norm_grid:
-    def __init__(self, sol_grid, parent, sep, b0=np.zeros(3), b1=np.zeros(3)):
+    def __init__(self, sol_grid, parent, sep, b0=np.zeros(3), b1=np.zeros(3), b2=np.zeros(3)):
+        
         self.angles = np.pi - np.copy(sol_grid.grid[:,:,2])
+        
         self.bp_loc = sol_grid.bp_loc
         self.npts = sol_grid.npts
         self.rows = sol_grid.rows
         self.cols = sol_grid.cols
+        
+        # if type(sol_grid.old_grid) == type(None):
+        #     self.angles = np.pi - np.copy(sol_grid.grid[:,:,2])
+            
+        #     self.bp_loc = sol_grid.bp_loc
+        #     self.npts = sol_grid.npts
+        #     self.rows = sol_grid.rows
+        #     self.cols = sol_grid.cols
+        # else:
+        #     self.angles = np.pi - np.copy(sol_grid.old_grid[:,:,2])
+        #     self.bp_loc = None
+        #     ##########################################################
+        #     self.npts = sol_grid.npts
+        #     self.rows = sol_grid.rows
+        #     self.cols = sol_grid.cols
         
         self.parent = parent
         self.children = None
@@ -448,6 +493,7 @@ class Norm_grid:
         self.sep = sep
         self.b0 = b0
         self.b1 = b1
+        self.b2 = b2
         
         self.norms = np.zeros((self.rows,self.cols,3))
         self.grid_solve()
@@ -461,24 +507,41 @@ class Norm_grid:
                     if np.any(self.norms[0,0,:] != 0):
                         continue
                     
-                    if (np.any(self.b0 != 0)) and (np.any(self.b1 != 0)):
+                    if np.any(self.b1 != 0):
                         n0 = self.b0
                         n1 = self.b1     
-                    else:
+                    if np.any(self.b2 != 0):
+                        n0 = self.b0
+                        n2 = self.b2
+                    if np.all(self.b0==0):
                         n0 = np.array([0,0,1])
                         e2 = np.array([0,1,0])
                         n1 = math_ddg.rod(n0, e2, self.sep)
                         n1 /= norm(n1)
                     
-                    v1 = np.cross(n0,n1)
-                    v2 = math_ddg.rod(v1, n0, self.angles[0,0])
-                    v2 /= norm(v2)
-                    n2 = math_ddg.rod(n0, v2, self.sep)
-                    
-                    vv12 = np.cross(n1,n2)
-                    vv12 /= norm(vv12)
-                    n12 = math_ddg.house(n0, vv12)
-                    n12 /= norm(n12)
+                    if np.any(self.b1 != 0) or np.all(self.b0==0):
+                        v1 = np.cross(n0,n1)
+                        v2 = math_ddg.rod(v1, n0, self.angles[0,0])
+                        v2 /= norm(v2)
+                        n2 = math_ddg.rod(n0, v2, self.sep)
+                        
+                        vv12 = np.cross(n1,n2)
+                        vv12 /= norm(vv12)
+                        n12 = math_ddg.house(n0, vv12)
+                        n12 /= norm(n12)
+                    else:
+                        v1 = np.cross(n2, n0)
+                        v2 = math_ddg.rod(v1, n0, -self.angles[0,0])
+                        v2 /= norm(v2)
+                        
+                        n1 = math_ddg.rod(n0, v2, -self.sep)
+                        
+                        vv12 = np.cross(n1, n2)
+                        vv12 /= norm(vv12)
+                        n12 = math_ddg.house(n0, vv12)
+                        n12 /= norm(n12)
+        
+                        
                     
                     self.norms[0,0,:] = n0
                     self.norms[0,1,:] = n1
@@ -553,9 +616,9 @@ class Norm_grid:
                 self.solve(self.rows - 1, 1)
                 self.norms[1,1:,:] = 0
                 self.norms[1:,1,:] = 0
-            else:
-                self.solve(us, self.cols - 1)
-                self.solve(self.rows - 1, vs)
+
+            self.solve(us, self.cols - 1)
+            self.solve(self.rows - 1, vs)
 
     def angle_test(self):
         # first checking to see if angles match what they should be in a_grid 
@@ -618,10 +681,15 @@ class Norm_tree:
         us, vs = sol_grid.bp_loc
         sol_children = sol_grid.children
         
-        
-        ng3 = Norm_grid(sol_children[2], parent, self.sep, b0=parent.norms[us,vs,:], b1=parent.norms[us,vs+1,:])
-        ng2 = Norm_grid(sol_children[1], parent, self.sep, b0=ng3.norms[0,0,:], b1=ng3.norms[1,0,:])
-        ng1 = Norm_grid(sol_children[0], parent, self.sep, b0=ng2.norms[0,0,:], b1=ng2.norms[1,0,:])
+            
+        if us !=0: 
+            ng3 = Norm_grid(sol_children[2], parent, self.sep, b0=parent.norms[us,vs,:], b1=parent.norms[us,vs+1,:])
+            ng2 = Norm_grid(sol_children[1], parent, self.sep, b0=ng3.norms[0,0,:], b1=ng3.norms[1,0,:])
+            ng1 = Norm_grid(sol_children[0], parent, self.sep, b0=ng2.norms[0,0,:], b1=ng2.norms[1,0,:])
+        else:
+            ng1 = Norm_grid(sol_children[0], parent, self.sep, b0=parent.norms[us,vs,:], b2=parent.norms[us+1,vs,:])
+            ng2 = Norm_grid(sol_children[1], parent, self.sep, b0=ng1.norms[0,0,:], b2=ng1.norms[0,1,:])
+            ng3 = Norm_grid(sol_children[2], parent, self.sep, b0=ng2.norms[0,0,:], b2=ng2.norms[0,1,:])
         
         norm_children = [ng1, ng2, ng3]
         parent.children = norm_children
@@ -800,10 +868,9 @@ class Surf_tree:
         # b0=parent.grid[us,vs,:], b1=sg1.grid[0,1,:], b2=sg3.grid[1,0,:]
         pc = parent.check
         
-        
-        sg3 = Surf_grid(sol_children[2], parent, b0=parent.grid[us,vs,:], check=pc)
-        sg2 = Surf_grid(sol_children[1], parent, b0=parent.grid[us,vs,:], check=not pc)
-        sg1 = Surf_grid(sol_children[0], parent, b0=parent.grid[us,vs,:], check=pc)
+        sg3 = Surf_grid(sol_children[2], parent, b0=parent.grid[us,vs,:], check= pc)
+        sg2 = Surf_grid(sol_children[1], parent, b0=parent.grid[us,vs,:], check= not pc)
+        sg1 = Surf_grid(sol_children[0], parent, b0=parent.grid[us,vs,:], check= pc)
         
         surf_children = [sg1, sg2, sg3]
         parent.children = surf_children
@@ -816,23 +883,44 @@ if __name__ == '__main__':
     # phi0 = np.pi/16
     # jeff = Sol_tree(phi0, 2.5, 3, 0.1)
     # 
-    step = 0.01
-    i = 34
-    # jeff = Sol_tree(np.pi/2, 2.5, 2.4, .1)
+    # jeff = Sol_tree(np.pi/2, 2.5, 2.4, .25)
+    # jeff.bp1(max_depth=2)
     
-    phi0 = .5*np.pi/3 
-    cutoff = 2
-    R = 2.5
+    # Talk params one branch 
+    # phi0 = np.pi/2
+    # cutoff = 2
+    # R = 3
+
+    # sep = 0.1
+    # jeff = Sol_tree(phi0, cutoff, R, sep)
+    # jeff.bp1(max_depth=0)
+    
+    # Talk params bp1
+    phi0 = np.pi/3
+    cutoff = np.pi - 1
+    R = 3
     sep = 0.1
     jeff = Sol_tree(phi0, cutoff, R, sep)
-    # jeff.bp1()
-    jeff.bp2(3*phi0)
-    vis.plot_grid_pdisc(jeff.base, plt_bps=False, plt_bds=False, uv_lines=True)
-    # vis.plot_grid_rho(jeff.base)
+    jeff.bp1()
+    
+    
+    # Talk params bp2
+    # phi0 = np.pi/6
+    # cutoff = 3 * phi0
+    # R = 4
+    # sep = 0.1
+    # jeff = Sol_tree(phi0, cutoff, R, sep)
+    # jeff.bp2(3*phi0)
+    
+    
+    vis.plot_grid_pdisc(jeff.base, plt_bps=True, plt_bds=True, uv_lines=True)
+    # # vis.plot_grid_asym(jeff.base)
+    # # vis.plot_grid_rho(jeff.base)
     
     # norman = Norm_tree(jeff)
-    # vis.Norm_plot(norman.norms_base, plt_bps=True, plt_bds=True)
-    # vis.Arc_plot(norman.norms_base, plt_bps=True, plt_bds=True, depth_dis=True)
+    # vis.Arc_plot(norman.norms_base, depth_dis=True, plt_bps=True, plt_bds=True)
+    # # vis.Norm_plot(norman.norms_base, plt_bps=True, plt_bds=True)
+   
     
     # sherman = Surf_tree(norman)
     # vis.Surf_plot(sherman.base)

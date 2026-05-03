@@ -26,20 +26,14 @@ def plot_grid_pdisc(sol_grid, depth=0, fig=None, ax=None, bd_sect=False,
         return
     if (depth == 0):
         fig, ax = plt.subplots()
-        # r1 = sol_grid.r1
-        # r2 = sol_grid.r2
-        # plt.xlim(-0.1, r1+0.13)
-        # plt.ylim(-0.1, r2+0.13)
         rmax = sol_grid.rmax
         plt.xlim(-0.1, rmax+0.14)
         plt.ylim(-0.1, rmax+0.14)
-        # plt.xlim(-0.1, 1.10)
-        # plt.ylim(-0.1, 1.10)
         plt.xlabel('x')
         plt.ylabel('y')
         ax.set_aspect('equal')
         circ_x, circ_y = geo_circ(sol_grid.r)
-        ax.plot(circ_x, circ_y, c='black', zorder=0)
+        ax.plot(circ_x, circ_y, c='green', zorder=0)
         
     # avoids ploting points on the boundry of sectors twice
     if bd_sect and not uv_lines:
@@ -69,9 +63,12 @@ def plot_grid_pdisc(sol_grid, depth=0, fig=None, ax=None, bd_sect=False,
             c1 = 'blue'
             c2 = 'red'
             z=1
-        for i in range(len(x[0,:])):
+        lb = 0
+        if plt_bds:
+            lb = 1
+        for i in range(1, len(x[0,:])):
             ax.plot(x[:,i],y[:,i], c=c1, zorder=z%2)
-        for i in range(len(x[:,0])):
+        for i in range(1, len(x[:,0])):
             ax.plot(x[i,:],y[i,:], c=c2, zorder=(z+1)%2)
         
     
@@ -98,8 +95,8 @@ def plot_grid_pdisc(sol_grid, depth=0, fig=None, ax=None, bd_sect=False,
     if plt_bds:
         xbd = sol_grid.xbd[:,:2]
         ybd = sol_grid.ybd[:,:2]
-        ax.plot(xbd[:,0], xbd[:,1], c='orange', zorder=3)
-        ax.plot(ybd[:,0], ybd[:,1], c='orange', zorder=3)
+        ax.plot(xbd[:,0], xbd[:,1], c='black', zorder=3)
+        ax.plot(ybd[:,0], ybd[:,1], c='black', zorder=3)
         
     # saves the image if save=True
     if depth == 0 and save:
@@ -130,7 +127,66 @@ def plot_grid_rho(sol_grid, depth=0, fig=None, ax=None):
     if (sol_grid.children != None):
         for child in sol_grid.children:
             plot_grid_rho(child, depth+1, fig, ax)
-        
+            
+# finds curves in asymptotic coords by scaning for first location with rho 
+# value >= target starting from x-axis
+def grid_scan(sol_grid, xv, yv, target):
+    cx1 = []
+    cy1 = []
+    cx2 = []
+    cy2 = []
+    rho = sol_grid.grid[:,:,2]
+    for i in range(sol_grid.rows):
+        for j in range(sol_grid.cols):
+            if rho[i,j] >= target:
+                cx1.append(xv[i,j])
+                cy1.append(yv[i,j])
+                break
+            
+    for j in range(sol_grid.cols):
+        for i in range(sol_grid.rows):
+            if rho[i,j] >= target:
+                cx2.append(xv[i,j])
+                cy2.append(yv[i,j])
+                break
+            
+    return cx1, cy1, cx2, cy2
+
+
+# function to plot sectors in asymptotic coordinates  
+def plot_grid_asym(sol_grid, depth=0, fig=None, ax=None, pt_size=10):
+    if (sol_grid == None):
+        return
+    if (depth == 0):
+        fig, ax = plt.subplots()
+        plt.xlabel('x')
+        plt.ylabel('y')
+        ax.set_aspect('equal')
+    
+    nx, ny = (sol_grid.rows, sol_grid.cols)
+    x = np.linspace(0, 1, nx)
+    y = np.linspace(0, 1, ny)
+    xv, yv = np.meshgrid(x, y)
+    rho = sol_grid.grid[:,:,2]
+    
+    cx1, cy1, cx2, cy2 = grid_scan(sol_grid,xv,yv,1.8)
+    cx = (np.array(cx1) + np.array(cx2[::-1])) / 2
+    cy = (np.array(cy1) + np.array(cy2[::-1])) / 2
+    
+    
+    ax.scatter(xv, yv, alpha=0.5,  zorder=1, s=pt_size)
+    ax.plot(cx1,cy1, zorder=2, c='red')
+    ax.plot(cx2,cy2, zorder=2, c='green')
+    ax.plot(cx,cy, zorder=2, c='black')
+    
+    
+    if depth==0:
+        plt.show()
+    
+    if (sol_grid.children != None):
+        for child in sol_grid.children:
+            plot_grid_rho(child, depth+1, fig, ax)
+
 
 """
 Functions for visualzing spherical Chebyshev net
@@ -154,6 +210,7 @@ class Norm_plot:
         self.pl.show()
         
     def plot_norm_arrows(self, norm_grid, depth=0):
+        print(depth)
             
         c = np.array([0,0,0])
         
@@ -170,16 +227,18 @@ class Norm_plot:
                     
         if (norm_grid.children != None):
             for child in norm_grid.children:
-                self.plot_norm_arrows(child, depth=depth+1)
+                    self.plot_norm_arrows(child, depth=depth+1)
                 
     def plot_bds(self, norm_grid, depth=0):
         
         c = np.array([0,0,0])
         
-        for i in range(norm_grid.npts):
+        for i in range(norm_grid.rows):
             n1 = norm_grid.norms[i,0,:]
-            n2 = norm_grid.norms[0,i,:]
             self.pl.add_arrows(c, n1, mag=1.05, color='orange')
+        
+        for j in range(norm_grid.cols):
+            n2 = norm_grid.norms[0,j,:]
             self.pl.add_arrows(c, n2, mag=1.05, color='orange')
             
         if (norm_grid.children != None):
@@ -228,31 +287,33 @@ class Arc_plot:
         lb = 0
         # if self.plt_bds:
         #     lb = 1
-        
         for i in range(lb, norm_grid.rows-1):
             for j in range(lb, norm_grid.cols-1):
                 
                 scale = 1
                 if self.depth_dis:
                     scale = 1 + 0.5 * depth
-                    
+
                 n0 = scale * norm_grid.norms[i  ,   j,:]
                 n1 = scale * norm_grid.norms[i  , j+1, :]
                 n2 = scale * norm_grid.norms[i+1,   j, :]
                 n12 = scale * norm_grid.norms[i+1, j+1, :]
                 
+                c1 = 'blue'
+                c2 = 'red'
+                
                 if np.any(n0 != 0) and np.any(n1 != 0) and i==0 and not self.plt_bds:
                     u1 = pv.CircularArc(n0, n1, c, resolution=10)
-                    self.pl.add_mesh(u1, line_width=5, color="purple")
+                    self.pl.add_mesh(u1, line_width=5, color=c1)
                 if np.any(n0 != 0) and np.any(n2 != 0) and j==0 and not self.plt_bds:
                     v1 = pv.CircularArc(n0, n2, c, resolution=10)
-                    self.pl.add_mesh(v1, line_width=5, color="orange")
+                    self.pl.add_mesh(v1, line_width=5, color=c2)
                 if np.any(n2 != 0) and np.any(n12 != 0):
                     u2 = pv.CircularArc(n2, n12, c, resolution=10)
-                    self.pl.add_mesh(u2, line_width=5, color="purple")
+                    self.pl.add_mesh(u2, line_width=5, color=c1)
                 if np.any(n1 != 0) and np.any(n12 != 0):
                     v2 = pv.CircularArc(n1, n12, c, resolution=10)
-                    self.pl.add_mesh(v2, line_width=5, color="orange")
+                    self.pl.add_mesh(v2, line_width=5, color=c2)
         
                 
         if (norm_grid.children != None):
@@ -270,16 +331,21 @@ class Arc_plot:
         for i in range(norm_grid.rows - 1):
             n1 = scale * norm_grid.norms[i,0,:]
             n11 = scale * norm_grid.norms[i+1,0,:]
-            v1 = pv.CircularArc(n1, n11, c, resolution=10)
-            self.pl.add_mesh(v1, line_width=5, color="black")
+            if np.any(n1 != 0) and np.any(n11 != 0):
+                v1 = pv.CircularArc(n1, n11, c, resolution=10)
+                self.pl.add_mesh(v1, line_width=5, color="black")
+            
             
         for i in range(norm_grid.cols - 1):
             n2 = scale * norm_grid.norms[0,i,:]
             n22 = scale * norm_grid.norms[0,i+1,:]
-            u1 = pv.CircularArc(n2, n22, c, resolution=10)
-            self.pl.add_mesh(u1, line_width=5, color="black")
-        
+            if np.any(n2 != 0) and np.any(n22 != 0):
+                u1 = pv.CircularArc(n2, n22, c, resolution=10)
+                self.pl.add_mesh(u1, line_width=5, color="black")
             
+        
+        
+
         if (norm_grid.children != None):
             for child in norm_grid.children:
                 self.plot_bds(child, depth=depth+1)
@@ -289,6 +355,7 @@ class Arc_plot:
         
         if (norm_grid.bp_loc != None):
             us, vs = norm_grid.bp_loc
+            print('Depth:',depth, ',',us,vs)
             n = norm_grid.norms[us,vs,:]
             
             if self.depth_dis:
@@ -387,9 +454,12 @@ class Surf_plot:
         self.pl.add_mesh(surf, show_edges=True, line_width=1, vertex_color='r')
         
         if surf_grid.children != None:
-            self.poly_plot(surf_grid.children[2], depth=depth+1)
-            self.poly_plot(surf_grid.children[0], depth=depth+1)
-            self.poly_plot(surf_grid.children[1], depth=depth+1)
+
+                self.poly_plot(surf_grid.children[2], depth=depth+1)
+                self.poly_plot(surf_grid.children[0], depth=depth+1)
+                self.poly_plot(surf_grid.children[1], depth=depth+1)
+            
+                
             # for child in surf_grid.children:
             #     self.poly_plot(child, depth=depth+1)
             #     break
