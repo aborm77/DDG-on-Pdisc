@@ -58,23 +58,20 @@ def f(pt, z0):
 
     Parameters
     ----------
-    pt : ndarray, shape (2,) or (N, 2)
+    pt : ndarray, shape (2,) 
         Point(s) in the Poincaré disk to transform.
     z0 : ndarray, shape (2,)
         Center of the transformation; must satisfy norm(z0) < 1.
 
     Returns
     -------
-    ndarray, shape (2,) or (N, 2)
+    ndarray, shape (2,)
         Transformed point(s), matching the shape of pt.
     """
-    p = pt[..., 0] + 1j * pt[..., 1]
-    z = complex(z0[0], z0[1])
-    result = (p + z) / (1 + z.conjugate() * p)
-    out = np.empty_like(pt, dtype=float)
-    out[..., 0] = result.real
-    out[..., 1] = result.imag
-    return out
+    p  = pt[0] + 1j * pt[1]
+    z  = z0[0] + 1j * z0[1]
+    r  = (p + z) / (1 + z.conjugate() * p)
+    return np.array([r.real, r.imag])
 
 
 def w12_comp(w1, w2):

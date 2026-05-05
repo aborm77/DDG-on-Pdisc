@@ -292,8 +292,6 @@ class Sol_tree:
         cols = sol_grid.cols
         base_grid = np.full((rows, cols, 3), np.nan)
         
-
-        
         if not (us == 0 or vs == 0):
             base_grid[:    , :vs + 1, :] = sol_grid.grid[:    , :vs + 1, :]
             base_grid[:us+1, vs+1:  , :] = sol_grid.grid[:us+1, vs+1:  , :]
@@ -383,8 +381,8 @@ class Sol_tree:
         
     # preforms the branch point algorithm described in the paper
     def bp1(self, sol_grid=None, depth=0, max_depth=None):
-        
         if sol_grid == None:
+            s = time.perf_counter()
             sol_grid = self.base
         if (max_depth != None and depth == max_depth):
             return 
@@ -398,11 +396,15 @@ class Sol_tree:
         self.bp1(sol_grid=sect3, depth=depth+1, max_depth=max_depth)
         
         if depth == 0:
+            e = time.perf_counter()
             print('Done placing branch points')
+            print(f"Time taken to place branch points: {e - s:.3f}s")
             
-    # preforms the new experimental branch point algorithm 
+    # preforms the new experimental branch point algorithm trys to place branch
+    # points on the boundaries of secctors
     def bp2(self, rho_target, sol_grid=None, depth=0, max_depth=None):
         if sol_grid == None:
+            s = time.perf_counter()
             sol_grid = self.base
         if (max_depth != None and depth == max_depth):
             return 
@@ -416,7 +418,9 @@ class Sol_tree:
         self.bp2(rho_target, sol_grid=sect3, depth=depth+1, max_depth=max_depth)
         
         if depth == 0:
+            e = time.perf_counter()
             print('Done placing branch points')
+            print(f"Time taken to place branch points: {e - s:.3f}s")
 
 
 # Class used for getting rid of the nodes outside of the geodesic radius 
@@ -445,6 +449,18 @@ class Mask_grid:
 
 
 class Norm_grid:
+    """
+    The purpose of this class is to create an array of quads on the sphere based
+    off an array of quads from a solution grid class. This is the physical 
+    implamentation of the map that takes us from the Poincare disk to the sphere.
+    Note that if alpha is the angle on the spherical quad, and rho is the angle on
+    the Poincare disk quad, they are related by alpha = pi - rho. We also have that
+    the grid spacing on the sphere, s, is related to the grid spacing on the Poincare
+    disk, s_p, via s = arccosh(1 / cosh(s_p)). Both of these conditions are neccessary
+    to constuct quads of the same area across model spaces. Another difficulty
+    is we have to tell the Norm_grid object what points to anchore its sector to
+    that is what b0, b1, and b2 are for.
+    """
     def __init__(self, sol_grid, parent, sep, b0=np.zeros(3), b1=np.zeros(3), b2=np.zeros(3), test=False):
         
         self.angles = np.pi - np.copy(sol_grid.grid[:,:,2])
@@ -470,9 +486,15 @@ class Norm_grid:
             self.angle_test()
         
     def solve(self, us, vs):
+        """
+        Analagous to the solve method on Sol_grid. This creates a full sector
+        of spherical rhombi based off a Sol_grid object. Uses Householder reflect
+        and the Rodreguiz rotation formula to create the appropriate sphereical rhombi
+        """
         
         for j in range(vs):
             for i in range(us):
+                # the base quad
                 if (i == 0 and j == 0):
                     if np.any(self.norms[0,0,:] != 0):
                         continue
@@ -488,7 +510,7 @@ class Norm_grid:
                         e2 = np.array([0,1,0])
                         n1 = math.rod(n0, e2, self.sep)
                         n1 /= norm(n1)
-                    
+                    # this case corresponds to chosing the very first quad in the tree
                     if np.any(self.b1 != 0) or np.all(self.b0==0):
                         v1 = np.cross(n0,n1)
                         v2 = math.rod(v1, n0, self.angles[0,0])
@@ -517,7 +539,7 @@ class Norm_grid:
                     self.norms[0,1,:] = n1
                     self.norms[1,0,:] = n2
                     self.norms[1,1,:] = n12
-                    
+                # This allows us to create the first row of quads
                 elif (j==0): 
                     if np.any(self.norms[i+1, j, :] != 0):
                         continue
@@ -537,7 +559,7 @@ class Norm_grid:
                     
                     self.norms[i+1,   j, :] = n2
                     self.norms[i+1, j+1, :] = n12
-                    
+                # this allows us to create the first column of quads
                 elif (i==0):
                     if np.any(self.norms[i, j+1, :] != 0):
                         continue
@@ -558,7 +580,7 @@ class Norm_grid:
                     
                     self.norms[i  , j+1, :] = n1
                     self.norms[i+1, j+1, :] = n12
-                    
+                # once we have made a row or a column the interior quads are easier
                 else: 
                     if np.any(self.norms[i+1, j+1, :] != 0):
                         continue
@@ -574,7 +596,11 @@ class Norm_grid:
                 
                     self.norms[i+1, j+1, :] = n12
 
+    
     def grid_solve(self):
+        """
+        This code allows us to use solve to handle L-shaped regions.
+        """
         if self.bp_loc == None:
             self.solve(self.rows - 1, self.cols - 1)
         else:
@@ -636,6 +662,10 @@ class Norm_grid:
         
     
 class Norm_tree:
+    """
+    Uses a Sol_tree object to map a Chebyshev net on the Poincare disk to the 
+    sphere.
+    """
     def __init__(self, sol_tree):
         self.sep = np.arccos(1 / np.cosh(sol_tree.sep)) 
         self.npts = sol_tree.npts
@@ -645,13 +675,16 @@ class Norm_tree:
         
 
     def create_tree(self, sol_grid, parent, depth=0):
+        """
+        Recursively creates the Chebyshev net. 
+        """
         if sol_grid.bp_loc == None or sol_grid.children == None:
             return
         
         us, vs = sol_grid.bp_loc
         sol_children = sol_grid.children
         
-            
+        # handles case of branch points being place on a boundary
         if us !=0: 
             ng3 = Norm_grid(sol_children[2], parent, self.sep, b0=parent.norms[us,vs,:], b1=parent.norms[us,vs+1,:])
             ng2 = Norm_grid(sol_children[1], parent, self.sep, b0=ng3.norms[0,0,:], b1=ng3.norms[1,0,:])
@@ -669,6 +702,10 @@ class Norm_tree:
 
         
     def sep_test(self):
+        """
+        Checks to make sure the seperation between vertices on spherical quads are
+        correct. Prints a warning if not.
+        """
         for i in range(self.npts - 1):
             for j in range(self.npts - 1):
                 n0 =  self.norms[i  , j  , :]
@@ -689,6 +726,9 @@ class Norm_tree:
                     
                 
     def norm_test(self):
+        """
+        Checks to make sure all vertices have unit length. Prints a warning if not.
+        """
         for i in range(self.npts - 1):
             for j in range(self.npts - 1):
                 n0 =  self.norms[i  , j  , :]
@@ -836,14 +876,11 @@ if __name__ == '__main__':
     # Talk params bp1
     phi0 = np.pi/3
     cutoff = 2.4
-    R = 5
+    R = 4
     sep = 0.1
     jeff = Sol_tree(phi0, cutoff, R, sep)
-    
-    s = time.perf_counter()
     jeff.bp1()
-    e = time.perf_counter()
-    print(f"Time taken to place branch points: {e - s:.3f}s")
+    
     
     # Talk params bp2
     # phi0 = np.pi/6
@@ -854,7 +891,7 @@ if __name__ == '__main__':
     # jeff.bp2(3*phi0)
     
     
-    vis.plot_grid_pdisc(jeff.base, plt_bps=True, plt_bds=True, uv_lines=True)
+    # vis.plot_grid_pdisc(jeff.base, plt_bps=True, plt_bds=True, uv_lines=True)
     
     # norman = Norm_tree(jeff)
     # vis.Arc_plot(norman.norms_base, depth_dis=True, plt_bps=True, plt_bds=True)
