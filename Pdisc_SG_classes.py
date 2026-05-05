@@ -18,7 +18,7 @@ and a maximal geodesic radius. All points created in this way are stored as
 numpy arrays
 """
 class Sol_grid:
-    def __init__(self, xbd, ybd, parent, R, ams, test=False):
+    def __init__(self, xbd, ybd, parent, R, ams, test=True):
         self.xbd = xbd
         self.ybd = ybd
         self.parent = parent
@@ -42,7 +42,6 @@ class Sol_grid:
         
         if test:
             self.angle_test()
-            self.sep_test()
         
         
     # given boundary data on two rays creates a Chebyshev net on the Poincare disk
@@ -418,7 +417,7 @@ class Mask_grid:
 
 
 class Norm_grid:
-    def __init__(self, sol_grid, parent, sep, b0=np.zeros(3), b1=np.zeros(3), b2=np.zeros(3), test=False):
+    def __init__(self, sol_grid, parent, sep, b0=np.zeros(3), b1=np.zeros(3), b2=np.zeros(3), test=True):
         
         self.angles = np.pi - np.copy(sol_grid.grid[:,:,2])
         
@@ -809,7 +808,7 @@ if __name__ == '__main__':
     # Talk params bp1
     phi0 = np.pi/3
     cutoff = 2.4
-    R = 2
+    R = 4
     sep = 0.1
     jeff = Sol_tree(phi0, cutoff, R, sep)
     jeff.bp1()
@@ -827,7 +826,7 @@ if __name__ == '__main__':
     vis.plot_grid_pdisc(jeff.base, plt_bps=True, plt_bds=True, uv_lines=True)
     
     norman = Norm_tree(jeff)
-    vis.Arc_plot(norman.norms_base, depth_dis=True, plt_bps=True, plt_bds=True)
+    # vis.Arc_plot(norman.norms_base, depth_dis=True, plt_bps=True, plt_bds=True)
    
     sherman = Surf_tree(norman)
     vis.Surf_plot(sherman.base)

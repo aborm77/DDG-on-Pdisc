@@ -1,50 +1,110 @@
 # -*- coding: utf-8 -*-
 """
-@author: Ari Bormanis
-Purpose: Some math functions for DDG solving of the Sine-Gordon equation on 
-the Poincare disk.
+Math utilities for DDG solving of the Sine-Gordon equation on the Poincaré disk.
+
+Implements the geometric operations underlying the discrete K-surface construction
+described in:
+
+    Shearman, T. L. and Venkataramani, S. C. (2021). Distributed branch points and
+    the shape of elastic surfaces with constant negative curvature. Journal of
+    Nonlinear Science, 31(1), 13.
+
+Author: Ari Bormanis
 """
 
 import numpy as np
 from numpy.linalg import norm
 
-# householder reflection of a vector v through a plane with normal n
+
 def house(v, n):
-    return v - (2 * np.dot(v,n)) * n
+    """Reflect vector v through the plane with unit normal n (Householder reflection)."""
+    return v - (2 * np.dot(v, n)) * n
 
-# Rodrigues formula for rotation of a vector, v, by ,a, radians, around a normal, n
-# rotates according to right hand rule
+
 def rod(v, n, a):
-    return (np.cos(a) * v) + (np.sin(a) * np.cross(n,v)) + (n *(np.dot(n,v)) * (1 - np.cos(a)))
+    """Rotate vector v by a radians around unit axis n (Rodrigues' rotation formula).
 
-# Returns 2x2 rotation matrix using angle phi
+    Rotation follows the right-hand rule.
+
+    Parameters
+    ----------
+    v : ndarray, shape (3,)
+        Vector to rotate.
+    n : ndarray, shape (3,)
+        Unit rotation axis.
+    a : float
+        Rotation angle in radians.
+
+    Returns
+    -------
+    ndarray, shape (3,)
+        Rotated vector.
+    """
+    c, s = np.cos(a), np.sin(a)
+    return c * v + s * np.cross(n, v) + (1 - c) * np.dot(n, v) * n
+
+
 def rot(phi):
-    return np.array([[np.cos(phi), -np.sin(phi)],[np.sin(phi), np.cos(phi)]])
+    """Return the 2x2 rotation matrix for angle phi (radians)."""
+    c, s = np.cos(phi), np.sin(phi)
+    return np.array([[c, -s], [s, c]])
 
-# Applies the mobius function described in the distribtued branch points paper
-# The function has been rationalized so we can just apply it to real vectors
+
 def f(pt, z0):
-    dot = 1 + pt[0] * z0[0] + pt[1] * z0[1]
-    cross = pt[1] * z0[0] - pt[0] * z0[1]
-    denom = dot**2 + cross**2
-    num = pt + z0
-    x = dot * num[0] + cross * num[1]
-    y = dot * num[1] - cross * num[0]
-    return np.array([x,y]) / denom
+    """Apply a Möbius transformation of the Poincaré disk centered at z0.
+
+    Implements the map f_{z0}(pt) = (pt + z0) / (1 + conj(z0) * pt), which is
+    an isometry of the Poincaré disk that sends z0 to the origin.
+
+    Parameters
+    ----------
+    pt : ndarray, shape (2,) or (N, 2)
+        Point(s) in the Poincaré disk to transform.
+    z0 : ndarray, shape (2,)
+        Center of the transformation; must satisfy norm(z0) < 1.
+
+    Returns
+    -------
+    ndarray, shape (2,) or (N, 2)
+        Transformed point(s), matching the shape of pt.
+    """
+    p = pt[..., 0] + 1j * pt[..., 1]
+    z = complex(z0[0], z0[1])
+    result = (p + z) / (1 + z.conjugate() * p)
+    out = np.empty_like(pt, dtype=float)
+    out[..., 0] = result.real
+    out[..., 1] = result.imag
+    return out
 
 
-# Computes the last vertex in the quadralaterial like in the branch points paper
 def w12_comp(w1, w2):
-    num = w1 + w2
-    denom = 1 + np.sqrt((w1[0]*w2[0] - w1[1]*w2[1])**2 + (w1[0]*w2[1] + w1[1]*w2[0])**2)
-    return num / denom
+    """Compute the fourth vertex of a Chebyshev quadrilateral given two adjacent vertices.
 
-# Computes the angle betwen two vectors using the dot product
-def angle(w1,w2):
-    return np.arccos(np.dot(w1,w2) / (norm(w1) * norm(w2)))
+    Returns the unique point w12 such that (w0=origin, w1, w2, w12) forms a
+    rhombus in the Poincaré disk metric, as given in Shearman & Venkataramani (2021).
+    The denominator uses the identity norm(w1 * w2) = norm(w1) * norm(w2) to
+    avoid an explicit complex product.
 
-# Computes geodesic distance of a point from the origin in the Poincare disk
+    Parameters
+    ----------
+    w1 : ndarray, shape (2,)
+        First adjacent vertex (in Möbius-translated coordinates with w0 at origin).
+    w2 : ndarray, shape (2,)
+        Second adjacent vertex.
+
+    Returns
+    -------
+    ndarray, shape (2,)
+        Fourth vertex of the quadrilateral.
+    """
+    return (w1 + w2) / (1 + norm(w1) * norm(w2))
+
+
+def angle(w1, w2):
+    """Return the angle in radians between vectors w1 and w2."""
+    return np.arccos(np.clip(np.dot(w1, w2) / (norm(w1) * norm(w2)), -1.0, 1.0))
+
+
 def geo_dist(w):
-    return 2*np.arctanh(norm(w))
-
-
+    """Return the geodesic distance from the origin to w in the Poincaré disk."""
+    return 2 * np.arctanh(norm(w))
