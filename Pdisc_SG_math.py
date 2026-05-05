@@ -102,7 +102,7 @@ def w12_comp(w1, w2):
 
 def angle(w1, w2):
     """Return the angle in radians between vectors w1 and w2."""
-    return np.arccos(np.clip(np.dot(w1, w2) / (norm(w1) * norm(w2)), -1.0, 1.0))
+    return np.arccos(np.dot(w1, w2) / (norm(w1) * norm(w2)))
 
 
 def geo_dist(w):

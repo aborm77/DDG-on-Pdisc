@@ -5,11 +5,51 @@ Created on Sun Nov  3 11:22:20 2024
 @author: Ari Bormanis
 Purpose: DDG solving of the Sine-Gordon equation on the Poincare disk
 """
+import time
 import numpy as np
 from numpy.linalg import norm
 
 import Pdisc_SG_math as math
 import Pdisc_SG_vis as vis
+from numba import njit as _njit
+
+"""
+Some duplicated functions from math.py Necessary to be able to use _njit in 
+this file.
+"""
+@_njit
+def _f_nb(pt, z0):
+    p  = pt[0] + 1j * pt[1]
+    z  = z0[0] + 1j * z0[1]
+    r  = (p + z) / (1 + z.conjugate() * p)
+    return np.array([r.real, r.imag])
+
+@_njit
+def _w12_comp_nb(w1, w2):
+    n1 = np.sqrt(w1[0]**2 + w1[1]**2)
+    n2 = np.sqrt(w2[0]**2 + w2[1]**2)
+    return (w1 + w2) / (1.0 + n1 * n2)
+
+@_njit
+def _angle_nb(w1, w2):
+    dot = w1[0]*w2[0] + w1[1]*w2[1]
+    n1  = np.sqrt(w1[0]**2 + w1[1]**2)
+    n2  = np.sqrt(w2[0]**2 + w2[1]**2)
+    cos_val = dot / (n1 * n2)
+    return np.arccos(cos_val)
+
+@_njit
+def _grid_solve_nb(sol_grid, rows, cols):
+    for i in range(rows - 1):
+        for j in range(cols - 1):
+            z0 = sol_grid[i,   j,   :2]
+            z1 = sol_grid[i,   j+1, :2]
+            z2 = sol_grid[i+1, j,   :2]
+            w1 = _f_nb(z1, -z0)
+            w2 = _f_nb(z2, -z0)
+            sol_grid[i, j, 2]        = _angle_nb(w1, w2)
+            sol_grid[i+1, j+1, :2]  = _f_nb(_w12_comp_nb(w1, w2), z0)
+    return sol_grid
 
 
 """
@@ -18,7 +58,7 @@ and a maximal geodesic radius. All points created in this way are stored as
 numpy arrays
 """
 class Sol_grid:
-    def __init__(self, xbd, ybd, parent, R, ams, test=True):
+    def __init__(self, xbd, ybd, parent, R, ams, test=False):
         self.xbd = xbd
         self.ybd = ybd
         self.parent = parent
@@ -49,21 +89,9 @@ class Sol_grid:
     # to the sine-Gordon equation in [:,:,2]
     def grid_solve(self):
         sol_grid = np.full((self.rows, self.cols, 3), np.nan)
-        sol_grid[0,:,:2] = self.xbd[:,:2]
-        sol_grid[:,0,:2] = self.ybd[:,:2]
-        
-        # Now creating cheby net
-        for i in range(self.rows - 1):
-            for j in range(self.cols - 1):
-                z2 = sol_grid[i+1, j  , :2]
-                z0 = sol_grid[i  , j  , :2]
-                z1 = sol_grid[i  , j+1, :2]
-                w2 = math.f(z2,-z0)
-                w1 = math.f(z1,-z0)
-                w12 = math.w12_comp(w1,w2)
-                sol_grid[i,j,2] = math.angle(w1,w2)
-                sol_grid[i+1,j+1,:2] = math.f(w12,z0)
-        return sol_grid
+        sol_grid[0, :, :2] = self.xbd[:, :2]
+        sol_grid[:, 0, :2] = self.ybd[:, :2]
+        return _grid_solve_nb(sol_grid, self.rows, self.cols)
     
                 
     # This tests to make sure we are actually constucting rhombi
@@ -417,7 +445,7 @@ class Mask_grid:
 
 
 class Norm_grid:
-    def __init__(self, sol_grid, parent, sep, b0=np.zeros(3), b1=np.zeros(3), b2=np.zeros(3), test=True):
+    def __init__(self, sol_grid, parent, sep, b0=np.zeros(3), b1=np.zeros(3), b2=np.zeros(3), test=False):
         
         self.angles = np.pi - np.copy(sol_grid.grid[:,:,2])
         
@@ -808,11 +836,14 @@ if __name__ == '__main__':
     # Talk params bp1
     phi0 = np.pi/3
     cutoff = 2.4
-    R = 4
+    R = 5
     sep = 0.1
     jeff = Sol_tree(phi0, cutoff, R, sep)
-    jeff.bp1()
     
+    s = time.perf_counter()
+    jeff.bp1()
+    e = time.perf_counter()
+    print(f"Time taken to place branch points: {e - s:.3f}s")
     
     # Talk params bp2
     # phi0 = np.pi/6
@@ -825,9 +856,9 @@ if __name__ == '__main__':
     
     vis.plot_grid_pdisc(jeff.base, plt_bps=True, plt_bds=True, uv_lines=True)
     
-    norman = Norm_tree(jeff)
+    # norman = Norm_tree(jeff)
     # vis.Arc_plot(norman.norms_base, depth_dis=True, plt_bps=True, plt_bds=True)
    
-    sherman = Surf_tree(norman)
-    vis.Surf_plot(sherman.base)
+    # sherman = Surf_tree(norman)
+    # vis.Surf_plot(sherman.base)
     
