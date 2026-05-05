@@ -22,7 +22,7 @@ Why do certain strange, curly, crenelated shapes appear in nature? We hypothesiz
 and model this via an energy functional
 
 $$ \mathcal{E}_2[r] = \begin{cases}
-    \int_{\Omega} (\kappa_1^2 + \kappa_2^2) \; dA \text{ if } r\in W^{2,2}, \; dr\cdot dr=g\\
+    \int_{\Omega} (\kappa_1^2 + \kappa_2^2) &nbsp; dA \text{ if } r\in W^{2,2}, &nbsp; dr\cdot dr=g\\
     + \infty, \text{ else.}
     \end{cases} 
 $$
