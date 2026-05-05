@@ -1,9 +1,21 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Nov  3 11:22:20 2024
+DDG solving of the Sine-Gordon equation on the Poincaré disk.
 
-@author: Ari Bormanis
-Purpose: DDG solving of the Sine-Gordon equation on the Poincare disk
+Implements the discrete K-surface pipeline:
+
+    Poincaré disk (Sol_tree) → unit sphere (Norm_tree) → surface in R³ (Surf_tree)
+
+Based on:
+
+    Bobenko, A. I. and Pinkall, U. (1996). Discrete surfaces with constant negative
+    Gaussian curvature and the Hirota equation. J. Differential Geometry, 43, 527-611.
+
+    Shearman, T. L. and Venkataramani, S. C. (2021). Distributed branch points and
+    the shape of elastic surfaces with constant negative curvature. Journal of
+    Nonlinear Science, 31(1), 13.
+
+Author: Ari Bormanis
 """
 import time
 import numpy as np
@@ -13,10 +25,8 @@ import Pdisc_SG_math as math
 import Pdisc_SG_vis as vis
 from numba import njit as _njit
 
-"""
-Some duplicated functions from math.py Necessary to be able to use _njit in 
-this file.
-"""
+# Numba-JIT versions of math.py functions. Duplicated here because numba requires
+# the entire call graph to be @njit-decorated.
 @_njit
 def _f_nb(pt, z0):
     p  = pt[0] + 1j * pt[1]
@@ -52,12 +62,18 @@ def _grid_solve_nb(sol_grid, rows, cols):
     return sol_grid
 
 
-"""
-This class creates a cheby net on the Poincare disk given x- and y-boundary data
-and a maximal geodesic radius. All points created in this way are stored as 
-numpy arrays
-"""
 class Sol_grid:
+    """
+    A Chebyshev net on the Poincaré disk, constructed from boundary data along
+    two asymptotic coordinate lines and solved quad-by-quad using the discrete
+    Sine-Gordon equation. For the base and middle sectors the boundary lines are
+    geodesic rays; for sectors 1 and 3 they are asymptotic lines inherited from
+    the parent sector.
+
+    The solved grid is stored as a (rows, cols, 3) array: columns 0–1 hold the
+    (x, y) coordinates of each vertex in the disk, and column 2 holds the
+    Sine-Gordon angle ρ at that vertex.
+    """
     def __init__(self, xbd, ybd, parent, R, ams, test=False):
         self.xbd = xbd
         self.ybd = ybd
@@ -74,8 +90,8 @@ class Sol_grid:
         self.children = None
         self.old_grid = None
         
-        self.grid = self.grid_solve()     
-        
+        self.grid = self.grid_solve()
+
         # determining the maximum distances in a sector for the purpose of plotting
         rdiag = math.norm([self.grid[-1,-1,0], self.grid[-1,-1,1]])
         self.rmax = np.max([self.r1, self.r2, rdiag])
@@ -84,18 +100,16 @@ class Sol_grid:
             self.angle_test()
         
         
-    # given boundary data on two rays creates a Chebyshev net on the Poincare disk
-    # sol_grid stores x values of pts in [:,:,0], y values in [:,:,1], and the solution
-    # to the sine-Gordon equation in [:,:,2]
     def grid_solve(self):
+        """Build the Chebyshev net by solving for each interior vertex quad-by-quad."""
         sol_grid = np.full((self.rows, self.cols, 3), np.nan)
         sol_grid[0, :, :2] = self.xbd[:, :2]
         sol_grid[:, 0, :2] = self.ybd[:, :2]
         return _grid_solve_nb(sol_grid, self.rows, self.cols)
     
                 
-    # This tests to make sure we are actually constucting rhombi
     def angle_test(self):
+        """Verify that opposite angles of each quad are equal, as required by the Chebyshev net construction. Prints a warning for any quad that fails."""
         for i in range(self.rows - 1):
             for j in range(self.cols - 1):
                 z0 =  self.grid[i  , j  , :2]
@@ -134,13 +148,18 @@ class Sol_grid:
         
 
 
-"""
-This class preforms the branch point placement process and in doing so creates
-a tree of Sol_grid objects
-"""
 class Sol_tree:
+    """
+    Manages the recursive branch point placement process, building a tree of
+    Sol_grid objects that together tile the Poincaré disk up to geodesic radius R.
+
+    Two placement algorithms are provided. bp1 scans inward from the sector
+    boundaries to find the largest L-shaped sub-region in which all quad angles
+    remain below cutoff. bp2 instead targets a specific rho_target value on the
+    sector boundary or diagonal.
+    """
     def __init__(self, phi0, cutoff, R, sep):
-        if (phi0 >= np.pi or phi0 <=0):
+        if (phi0 >= np.pi or phi0 <= 0):
             print("Error: phi0 is not in the allowed range of (0,pi)")
             return -1
         if (phi0 > cutoff):
@@ -152,16 +171,16 @@ class Sol_tree:
         self.cutoff = cutoff
         self.R = R
         self.sep = sep
-        self.npts = int(np.ceil(R / sep)) +1
-        
-        xbd = self.create_geo(0   , phi0, self.npts)
+        self.npts = int(np.ceil(R / sep)) + 1
+
+        xbd = self.create_geo(0, phi0, self.npts)
         ybd = self.create_geo(phi0, phi0, self.npts)
         self.base = Sol_grid(xbd, ybd, 'base', self.R, 'ams')
         
         print('Initialized a solution tree with intial grid of size ' + str(self.npts) +'x' +  str(self.npts))
     
-    # Creates geodesic ray with specified length, angle, and Sine-Gordon solution data
     def create_geo(self, phi, rho_bd, npts):
+        """Create a geodesic ray of length npts at angle phi, with constant ρ boundary value rho_bd."""
         ray_len = self.sep * (npts-1)
         x = np.linspace(0, ray_len, npts)
         x = np.tanh(x/2)
@@ -175,9 +194,8 @@ class Sol_tree:
         return ax.T
         
     
-    # checks to see if the boundry of the sector lies outside the geodesic 
-    # of radius self,r
     def bndry_check(self, sol_grid):
+        """Return True if all boundary points of sol_grid lie outside geodesic radius R."""
         xpts = sol_grid.xbd[:,:2]
         ypts = sol_grid.ybd[:,:2]
         pts = np.vstack((xpts,ypts))
@@ -188,8 +206,12 @@ class Sol_tree:
         return True
     
     
-    # place a branch point and return a solution grid representing the new L-shaped region
     def place_bp1(self, sol_grid):
+        """Trim sol_grid to the largest L-shaped region with all quad angles below cutoff.
+
+        Returns the branch point index (us, vs), None if no branch point is needed,
+        or -1 if placement is impossible given the boundary data.
+        """
         nan_ignore = np.ma.array(sol_grid.grid[:,:,2], mask=np.isnan(sol_grid.grid[:,:,2]))
         if np.all(nan_ignore < self.cutoff):
             return None
@@ -220,19 +242,21 @@ class Sol_tree:
         base_grid[:us+1, vs+1:  , :] = sol_grid.grid[:us+1, vs+1:  , :]
             
         sol_grid.grid = base_grid
-        sol_grid.bp_loc = (us,vs)
-        
+        sol_grid.bp_loc = (us, vs)
+
         if self.bndry_check(sol_grid):
             return
-        
-        return (us,vs)
-    
-    
-    # Finds the first node with asymptotic angle closest to rho_target 
-    # Searches starting from the origin and returns the largest index
-    # where the boundary data is less than rho_target 
-    # Current research suggests setting rho_target = 3 phi0
+
+        return (us, vs)
+
+
     def bnd_find(self, sol_grid, rho_target):
+        """Return the last boundary index where ρ is strictly less than rho_target.
+
+        Searches the relevant boundary (xbd for ams3, ybd for ams1) from the origin
+        outward. Returns -1 if the entire boundary is below rho_target.
+        Current research suggests setting rho_target = 3 * phi0.
+        """
         if sol_grid.ams == 'ams1':
             bd = sol_grid.ybd
         if sol_grid.ams == 'ams3':
@@ -246,13 +270,16 @@ class Sol_tree:
             if diffs[i] < 0:
                 return i - 1
             
-        # if this exacutes then the whole boundary has rho data < rho_target
+        # if this executes then the whole boundary has rho data < rho_target
         return -1
 
     
-    # Perfroms very similarly to bnd_find but this time searches the diagonal
-    # for the closest value to rho_target
     def diag_find(self, sol_grid, rho_target):
+        """Return the last diagonal index where ρ is strictly less than rho_target.
+
+        Used by place_bp2 for ams sectors where the branch point lies on the diagonal.
+        Returns -1 if the entire diagonal is below rho_target.
+        """
         diag = np.diagonal(sol_grid.grid[:,:,2])
         diffs = np.full((len(diag),), rho_target)
         diffs = diffs - diag
@@ -264,18 +291,23 @@ class Sol_tree:
         return -1
         
     
-    # This implaments the branch point placement in the new procedure
     def place_bp2(self, sol_grid, rho_target):
+        """Trim sol_grid to the L-shaped region defined by the rho_target isoline.
+
+        Uses bnd_find or diag_find depending on the sector type (ams) to locate
+        the branch point. Returns the branch point index (us, vs), or None if no
+        branch point is needed.
+        """
         us = 0
         vs = 0
-        if sol_grid.ams =='ams':
+        if sol_grid.ams == 'ams':
             loc = self.diag_find(sol_grid, rho_target)
             us = loc
             vs = loc
-        if sol_grid.ams =='ams1':
+        if sol_grid.ams == 'ams1':
             us = self.bnd_find(sol_grid, rho_target)
             sol_grid.old_grid = np.copy(sol_grid.grid)
-        if sol_grid.ams =='ams3':
+        if sol_grid.ams == 'ams3':
             vs = self.bnd_find(sol_grid, rho_target)
             sol_grid.old_grid = np.copy(sol_grid.grid)
             
@@ -302,20 +334,24 @@ class Sol_tree:
         
             
         sol_grid.grid = base_grid
-        sol_grid.bp_loc = (us,vs)
-        
-        # still returning if our current grid has boundaries outside our 
+        sol_grid.bp_loc = (us, vs)
+
+        # still returning if our current grid has boundaries outside our
         # geodesic radius
         if self.bndry_check(sol_grid):
             return
-        
-        return (us,vs)
+
+        return (us, vs)
         
     
     
-    # Given a solution grid with a branch point already placed, creates the 
-    # three sectors that spawn from it
     def create_sectors1(self, sol_grid):
+        """Create the three child Sol_grid sectors that emanate from a placed branch point.
+
+        The two new geodesic rays dividing the remaining region are placed at angles
+        phi1 and phi2, trisecting the angle at the branch point. The ρ boundary
+        values of the child sectors are shifted by -2 * bp_val to maintain continuity.
+        """
         bp_loc = sol_grid.bp_loc
         us = bp_loc[0]
         vs = bp_loc[1]
@@ -325,11 +361,7 @@ class Sol_tree:
         ax3_len = len(sol_grid.grid[us,vs:,:])
         max_len = max(ax1_len,ax3_len)
         
-        sect1 = np.zeros((ax1_len,ax1_len,3))
-        sect2 = np.zeros((max_len,max_len,3))
-        sect3 = np.zeros((ax3_len,ax3_len,3))
-        
-        if vs != 0 and us!=0:
+        if vs != 0 and us != 0:
             ax1 = np.copy(sol_grid.grid[us:,vs,:])
             ax3 = np.copy(sol_grid.grid[us,vs:,:])
         if vs == 0:
@@ -343,14 +375,14 @@ class Sol_tree:
         ax1[:,2] = ax1[:,2] - 2 * bp_val
         ax3[:,2] = ax3[:,2] - 2 * bp_val
         
-        if type(sol_grid.old_grid) != type(None):
-            z2 = sol_grid.old_grid[us+1, vs ,:2]
-            z0 = sol_grid.old_grid[us  ,vs  ,:2]
-            z1 = sol_grid.old_grid[us  ,vs+1,:2]
-        else: 
-            z2 = sol_grid.grid[us+1, vs ,:2]
-            z0 = sol_grid.grid[us  ,vs  ,:2]
-            z1 = sol_grid.grid[us  ,vs+1,:2]
+        if sol_grid.old_grid is not None:
+            z2 = sol_grid.old_grid[us+1, vs,   :2]
+            z0 = sol_grid.old_grid[us,   vs,   :2]
+            z1 = sol_grid.old_grid[us,   vs+1, :2]
+        else:
+            z2 = sol_grid.grid[us+1, vs,   :2]
+            z0 = sol_grid.grid[us,   vs,   :2]
+            z1 = sol_grid.grid[us,   vs+1, :2]
    
         w2 = math.f(z2,-z0)
         w1 = math.f(z1,-z0)
@@ -379,15 +411,15 @@ class Sol_tree:
 
         
         
-    # preforms the branch point algorithm described in the paper
     def bp1(self, sol_grid=None, depth=0, max_depth=None):
-        if sol_grid == None:
+        """Recursively apply branch point algorithm 1 to sol_grid and all descendant sectors."""
+        if sol_grid is None:
             s = time.perf_counter()
             sol_grid = self.base
-        if (max_depth != None and depth == max_depth):
-            return 
+        if (max_depth is not None and depth == max_depth):
+            return
         bp_loc = self.place_bp1(sol_grid)
-        if (bp_loc == None) or (bp_loc == -1):
+        if bp_loc is None or bp_loc == -1:
             return 
         
         sect1, sect2, sect3 = self.create_sectors1(sol_grid)
@@ -400,16 +432,15 @@ class Sol_tree:
             print('Done placing branch points')
             print(f"Time taken to place branch points: {e - s:.3f}s")
             
-    # preforms the new experimental branch point algorithm trys to place branch
-    # points on the boundaries of secctors
     def bp2(self, rho_target, sol_grid=None, depth=0, max_depth=None):
-        if sol_grid == None:
+        """Recursively apply the experimental branch point algorithm 2 to sol_grid and all descendant sectors."""
+        if sol_grid is None:
             s = time.perf_counter()
             sol_grid = self.base
-        if (max_depth != None and depth == max_depth):
-            return 
+        if (max_depth is not None and depth == max_depth):
+            return
         bp_loc = self.place_bp2(sol_grid, rho_target)
-        if bp_loc == None:
+        if bp_loc is None:
             return 
         
         sect1, sect2, sect3 = self.create_sectors1(sol_grid)
@@ -423,8 +454,8 @@ class Sol_tree:
             print(f"Time taken to place branch points: {e - s:.3f}s")
 
 
-# Class used for getting rid of the nodes outside of the geodesic radius 
 class Mask_grid:
+    """Remove grid points outside the geodesic radius by setting them to NaN."""
     def __init__(self, sol_grid, parent):
         self.grid = np.copy(sol_grid.grid)
         self.cols = sol_grid.cols
@@ -436,7 +467,7 @@ class Mask_grid:
         self.mask = np.logical_not(np.isnan(self.grid[:,:,0]))
 
 
-    # setting points outside the geodesic radius eqaul to nan
+    # setting points outside the geodesic radius equal to nan
     def grid_mask(self):
         for i in range(self.rows):
             for j in range(self.cols):
@@ -478,7 +509,7 @@ class Norm_grid:
         self.b1 = b1
         self.b2 = b2
         
-        self.norms = np.zeros((self.rows,self.cols,3))
+        self.norms = np.zeros((self.rows, self.cols, 3))
         
         self.grid_solve()
         
@@ -486,11 +517,7 @@ class Norm_grid:
             self.angle_test()
         
     def solve(self, us, vs):
-        """
-        Analagous to the solve method on Sol_grid. This creates a full sector
-        of spherical rhombi based off a Sol_grid object. Uses Householder reflect
-        and the Rodreguiz rotation formula to create the appropriate sphereical rhombi
-        """
+        """Build a sector of spherical rhombi based on the corresponding Chebyshev net in the Poincaré disk, using Rodrigues rotation and Householder reflection."""
         
         for j in range(vs):
             for i in range(us):
@@ -532,15 +559,13 @@ class Norm_grid:
                         vv12 /= norm(vv12)
                         n12 = math.house(n0, vv12)
                         n12 /= norm(n12)
-        
-                        
-                    
+
                     self.norms[0,0,:] = n0
                     self.norms[0,1,:] = n1
                     self.norms[1,0,:] = n2
                     self.norms[1,1,:] = n12
                 # This allows us to create the first row of quads
-                elif (j==0): 
+                elif (j == 0):
                     if np.any(self.norms[i+1, j, :] != 0):
                         continue
                     
@@ -598,15 +623,13 @@ class Norm_grid:
 
     
     def grid_solve(self):
-        """
-        This code allows us to use solve to handle L-shaped regions.
-        """
-        if self.bp_loc == None:
+        """Delegate to solve() twice to handle L-shaped regions created by branch point placement."""
+        if self.bp_loc is None:
             self.solve(self.rows - 1, self.cols - 1)
         else:
             us, vs = self.bp_loc
             # dealing with a degenerate but very possible case
-            if us == 0 and vs==0:
+            if us == 0 and vs == 0:
                 # just solving for the boundary
                 self.solve(1, self.cols - 1)
                 self.solve(self.rows - 1, 1)
@@ -628,10 +651,9 @@ class Norm_grid:
                 if np.any(n0 != 0) and np.any(n1 != 0) and np.any(n2 != 0) and np.any(n12 != 0):
                     v1 = np.cross(n1, n0)
                     v2 = np.cross(n2, n0)
-                    a = math.angle(v1, v2) 
-                    a_diff = np.abs(math.angle(v1, v2) - self.angles[i,j])
-                    
-    
+                    a = math.angle(v1, v2)
+                    a_diff = np.abs(a - self.angles[i, j])
+
                     if a_diff > 1e-8:
                         print('Warning! Some of the angles are incorrect')
                         print('Angle at '+'('+str(i)+','+str(j)+')'+' is wrong')
@@ -678,12 +700,12 @@ class Norm_tree:
         """
         Recursively creates the Chebyshev net. 
         """
-        if sol_grid.bp_loc == None or sol_grid.children == None:
+        if sol_grid.bp_loc is None or sol_grid.children is None:
             return
-        
+
         us, vs = sol_grid.bp_loc
         sol_children = sol_grid.children
-        
+
         # handles case of branch points being place on a boundary
         if us !=0: 
             ng3 = Norm_grid(sol_children[2], parent, self.sep, b0=parent.norms[us,vs,:], b1=parent.norms[us,vs+1,:])
@@ -747,13 +769,22 @@ class Norm_tree:
                     
                     
 class Surf_grid:
+    """
+    Maps the Chebyshev net in the Norm_grid object to a surface in R^3 using
+    a first order discretization of the Lelieuvre formulae: r_u = N_u x N,
+    r_v = -N_v x N. Explicitly, r_1 = r_0 + N_1 x N_0 and r_2 = r_0 - N_2 x N_0.
+    Here we also have to be careful because u,v-coordinates flip on every interior
+    Amsler sector. To account for this, if there is a coordinate flip we set
+    check=True which then transposes the normal field.
+    """
     def __init__(self, norm_grid, parent, b0=np.full(3,np.nan), b1=np.full(3,np.nan), b2=np.full(3,np.nan), check=False):
         self.rows = norm_grid.rows
         self.cols = norm_grid.cols
         self.norms = norm_grid.norms
         self.bp_loc = norm_grid.bp_loc
-        
         self.check = check
+        
+        # transposing normal field to account for flipped coordinates
         if check:
             temp = np.copy(self.norms)
             self.norms = np.zeros((self.cols, self.rows,3))
@@ -763,7 +794,7 @@ class Surf_grid:
             temp1 = self.rows
             self.rows = self.cols
             self.cols = temp1
-            if self.bp_loc != None:
+            if self.bp_loc is not None:
                 self.bp_loc = self.bp_loc[::-1]
             
         
@@ -779,7 +810,7 @@ class Surf_grid:
         self.grid_solve()
         
     def solve(self, us, vs):
-        
+        """Map a rectangular block of the Norm_grid to R^3 using the discrete Lelieuvre formulae."""
         for i in range(us):
             for j in range(vs):
                 n0 =  self.norms[i  , j  ,:]
@@ -787,7 +818,8 @@ class Surf_grid:
                 n2 =  self.norms[i+1, j  ,:]
                 n12 = self.norms[i+1, j+1,:]
                 
-                if i == 0 and j ==0:
+                # contstructing base quad
+                if i == 0 and j == 0:
                     if not (np.any(np.isnan(self.b0))):
                         r0 = self.b0    
                     else:
@@ -810,6 +842,7 @@ class Surf_grid:
                     self.grid[i+1, j  ,:] = r2
                     self.grid[i+1, j+1,:] = r12
                     
+                # constructing first row
                 elif j == 0:
                     r0 = self.grid[i,j,:]
                     r2 = r0 - np.cross(n2,n0)
@@ -818,6 +851,7 @@ class Surf_grid:
                     self.grid[i+1, j  ,:] = r2
                     self.grid[i+1, j+1,:] = r12
                     
+                # constructing first column
                 elif i == 0:
                     r0 = self.grid[i,j,:]
                     r1 = r0 + np.cross(n1,n0)
@@ -825,7 +859,8 @@ class Surf_grid:
                     
                     self.grid[i  , j+1,:] = r1
                     self.grid[i+1, j+1,:] = r12
-                    
+                
+                # constructing interior quads
                 else:
                     r1 = self.grid[i, j+1,:]
                     r12 = r1 - np.cross(n12,n1)
@@ -833,37 +868,41 @@ class Surf_grid:
                     self.grid[i+1, j+1,:] = r12
                     
     def grid_solve(self):
-        if self.bp_loc == None:
+        """Delegate to solve() twice to handle L-shaped regions created by branch point placement."""
+        if self.bp_loc is None:
             self.solve(self.rows - 1, self.cols - 1)
         else:
             us, vs = self.bp_loc
             self.solve(us, self.cols - 1)
             self.solve(self.rows - 1, vs)
-            
-                    
+
+
 class Surf_tree:
+    """
+    Maps the branched Chebysev net on the sphere to R^3 using the discrete 
+    Lelieuvre formulae.
+    """
     def __init__(self, norm_tree):
         self.npts = norm_tree.npts
         self.base = Surf_grid(norm_tree.norms_base, 'base')    
         self.create_tree(norm_tree.norms_base, self.base)
         
     def create_tree(self, norm_grid, parent, depth=0):
-        if norm_grid.bp_loc == None or norm_grid.children == None:
+        """Recursively build the surface tree, propagating branch point positions to each child Surf_grid."""
+        if norm_grid.bp_loc is None or norm_grid.children is None:
             return
-        
+
         pc = parent.check
-        
+
         if pc:
             us, vs = norm_grid.bp_loc[::-1]
         else:
             us, vs = norm_grid.bp_loc
         sol_children = norm_grid.children
-        
-        pc = parent.check
-        
-        sg3 = Surf_grid(sol_children[2], parent, b0=parent.grid[us,vs,:], check= pc)
-        sg2 = Surf_grid(sol_children[1], parent, b0=parent.grid[us,vs,:], check= not pc)
-        sg1 = Surf_grid(sol_children[0], parent, b0=parent.grid[us,vs,:], check= pc)
+
+        sg3 = Surf_grid(sol_children[2], parent, b0=parent.grid[us, vs, :], check=pc)
+        sg2 = Surf_grid(sol_children[1], parent, b0=parent.grid[us, vs, :], check=not pc)
+        sg1 = Surf_grid(sol_children[0], parent, b0=parent.grid[us, vs, :], check=pc)
         
         surf_children = [sg1, sg2, sg3]
         parent.children = surf_children
@@ -876,7 +915,7 @@ if __name__ == '__main__':
     # Talk params bp1
     phi0 = np.pi/3
     cutoff = 2.4
-    R = 4
+    R = 2.3
     sep = 0.1
     jeff = Sol_tree(phi0, cutoff, R, sep)
     jeff.bp1()
@@ -891,11 +930,11 @@ if __name__ == '__main__':
     # jeff.bp2(3*phi0)
     
     
-    # vis.plot_grid_pdisc(jeff.base, plt_bps=True, plt_bds=True, uv_lines=True)
+    vis.plot_grid_pdisc(jeff.base, plt_bps=True, plt_bds=True, uv_lines=True)
     
-    # norman = Norm_tree(jeff)
-    # vis.Arc_plot(norman.norms_base, depth_dis=True, plt_bps=True, plt_bds=True)
+    norman = Norm_tree(jeff)
+    vis.Arc_plot(norman.norms_base, depth_dis=True, plt_bps=True, plt_bds=True)
    
-    # sherman = Surf_tree(norman)
-    # vis.Surf_plot(sherman.base)
+    sherman = Surf_tree(norman)
+    vis.Surf_plot(sherman.base)
     
