@@ -1,6 +1,8 @@
 # Creating K-Surfaces with Branch Points
 
-![Alt text](gifs/old/Change_angle_bps_bndry.gif)
+<p align="center">
+  <img src="gifs/old/Change_angle_bps_bndry.gif" width="65%" alt="K-surface with branch points animating over varying angle parameter">
+</p>
 
 Create and visualize discrete analogues of surfaces with constant negative Gaussian curvature! The algorithms in this repo are based on the papers 
 
