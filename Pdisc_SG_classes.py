@@ -8,17 +8,14 @@ Purpose: DDG solving of the Sine-Gordon equation on the Poincare disk
 import numpy as np
 from numpy.linalg import norm
 
-import Pdisc_SG_math as math_ddg
+import Pdisc_SG_math as math
 import Pdisc_SG_vis as vis
 
 
-def angle(v1, v2):
-    return np.arccos(np.dot(v1,v2) / (norm(v1) * norm(v2)))
-        
-
 """
-This class creates a cheby net on the p-disc given x- and y-boundary data
-and a maximal geodesic radius
+This class creates a cheby net on the Poincare disk given x- and y-boundary data
+and a maximal geodesic radius. All points created in this way are stored as 
+numpy arrays
 """
 class Sol_grid:
     def __init__(self, xbd, ybd, parent, R, ams, test=False):
@@ -35,12 +32,13 @@ class Sol_grid:
 
         self.bp_loc = None
         self.children = None
+        self.old_grid = None
         
         self.grid = self.grid_solve()     
-        rdiag = math_ddg.norm([self.grid[-1,-1,0], self.grid[-1,-1,1]])
-        self.rmax = np.max([self.r1, self.r2, rdiag])
         
-        self.old_grid = None
+        # determining the maximum distances in a sector for the purpose of plotting
+        rdiag = math.norm([self.grid[-1,-1,0], self.grid[-1,-1,1]])
+        self.rmax = np.max([self.r1, self.r2, rdiag])
         
         if test:
             self.angle_test()
@@ -61,38 +59,15 @@ class Sol_grid:
                 z2 = sol_grid[i+1, j  , :2]
                 z0 = sol_grid[i  , j  , :2]
                 z1 = sol_grid[i  , j+1, :2]
-                w2 = math_ddg.f(z2,-z0)
-                w1 = math_ddg.f(z1,-z0)
-                w12 = math_ddg.w12_comp(w1,w2)
-                # sol_grid[i+1,j+1,2] = math_ddg.angle(w1,w2)
-                sol_grid[i,j,2] = math_ddg.angle(w1,w2)
-                    
-                sol_grid[i+1,j+1,:2] = math_ddg.f(w12,z0)
+                w2 = math.f(z2,-z0)
+                w1 = math.f(z1,-z0)
+                w12 = math.w12_comp(w1,w2)
+                sol_grid[i,j,2] = math.angle(w1,w2)
+                sol_grid[i+1,j+1,:2] = math.f(w12,z0)
         return sol_grid
     
-    
-    def sep_test(self):
-        for i in range(self.rows - 1):
-            for j in range(self.cols - 1):
-                z0 =  self.grid[i  , j  , :2]
-                z1 =  self.grid[i  , j+1, :2]
-                z2 =  self.grid[i+1, j  , :2]
-                z12 = self.grid[i+1, j+1, :2]
                 
-                # finding a0
-                w1 = math_ddg.f(z1,-z0)
-                w2 = math_ddg.f(z2,-z0)
-                a0 = math_ddg.angle(w1,w2)
-
-                # finding a12
-                ww1 = math_ddg.f(z1,-z12)
-                ww2 = math_ddg.f(z2,-z12)
-                a12 = math_ddg.angle(ww1,ww2)
-
-                # print(math_ddg.geo_dist(ww1))
-                # print(math_ddg.geo_dist(ww2))
-                
-        
+    # This tests to make sure we are actually constucting rhombi
     def angle_test(self):
         for i in range(self.rows - 1):
             for j in range(self.cols - 1):
@@ -102,24 +77,24 @@ class Sol_grid:
                 z12 = self.grid[i+1, j+1, :2]
                 
                 # finding a0
-                w1 = math_ddg.f(z1,-z0)
-                w2 = math_ddg.f(z2,-z0)
-                a0 = math_ddg.angle(w1,w2)
+                w1 = math.f(z1,-z0)
+                w2 = math.f(z2,-z0)
+                a0 = math.angle(w1,w2)
 
                 # finding a12
-                ww1 = math_ddg.f(z1,-z12)
-                ww2 = math_ddg.f(z2,-z12)
-                a12 = math_ddg.angle(ww1,ww2)
+                ww1 = math.f(z1,-z12)
+                ww2 = math.f(z2,-z12)
+                a12 = math.angle(ww1,ww2)
 
                 # finding a1
-                h1 = math_ddg.f(z12,-z1)
-                h2 = math_ddg.f(z0,-z1)
-                a1 = math_ddg.angle(h1,h2)
+                h1 = math.f(z12,-z1)
+                h2 = math.f(z0,-z1)
+                a1 = math.angle(h1,h2)
 
                 # finding a2
-                hh1 = math_ddg.f(z12,-z2)
-                hh2 = math_ddg.f(z0,-z2)
-                a2 = math_ddg.angle(hh1,hh2)
+                hh1 = math.f(z12,-z2)
+                hh2 = math.f(z0,-z2)
+                a2 = math.angle(hh1,hh2)
 
                 a_diff1 = np.abs(a0 - a12)
                 a_diff2 = np.abs(a1 - a2)
@@ -138,12 +113,6 @@ a tree of Sol_grid objects
 """
 class Sol_tree:
     def __init__(self, phi0, cutoff, R, sep):
-        self.phi0 = phi0
-        self.cutoff = cutoff
-        self.R = R
-        self.sep = sep
-        self.npts = int(np.ceil(R / sep)) +1
-        
         if (phi0 >= np.pi or phi0 <=0):
             print("Error: phi0 is not in the allowed range of (0,pi)")
             return -1
@@ -152,13 +121,19 @@ class Sol_tree:
             print("branch point placement impossible")
             return -1
         
+        self.phi0 = phi0
+        self.cutoff = cutoff
+        self.R = R
+        self.sep = sep
+        self.npts = int(np.ceil(R / sep)) +1
+        
         xbd = self.create_geo(0   , phi0, self.npts)
         ybd = self.create_geo(phi0, phi0, self.npts)
         self.base = Sol_grid(xbd, ybd, 'base', self.R, 'ams')
         
         print('Initialized a solution tree with intial grid of size ' + str(self.npts) +'x' +  str(self.npts))
     
-    # Creates geodesic ray with specified lenght, angle, and sine-gordon solution data
+    # Creates geodesic ray with specified length, angle, and Sine-Gordon solution data
     def create_geo(self, phi, rho_bd, npts):
         ray_len = self.sep * (npts-1)
         x = np.linspace(0, ray_len, npts)
@@ -166,7 +141,7 @@ class Sol_tree:
         y = np.zeros(npts)
         ax = np.vstack((x,y))
         if (phi != 0):
-            ax = np.matmul(math_ddg.rot(phi), ax)
+            ax = np.matmul(math.rot(phi), ax)
         rho_arr = np.full((1, npts), rho_bd)
         ax = np.concatenate((ax, rho_arr), axis=0)
             
@@ -181,7 +156,7 @@ class Sol_tree:
         pts = np.vstack((xpts,ypts))
         
         for pt in pts:
-            if math_ddg.geo_dist(pt) < sol_grid.R:
+            if math.geo_dist(pt) < sol_grid.R:
                 return False
         return True
     
@@ -196,7 +171,6 @@ class Sol_tree:
         cols = sol_grid.cols
         base_grid = np.full((rows, cols, 3), np.nan)
         
-    
         # finding branch points
         us = 0
         vs = 0
@@ -217,7 +191,6 @@ class Sol_tree:
         
         base_grid[:    , :vs + 1, :] = sol_grid.grid[:    , :vs + 1, :]
         base_grid[:us+1, vs+1:  , :] = sol_grid.grid[:us+1, vs+1:  , :]
-        
             
         sol_grid.grid = base_grid
         sol_grid.bp_loc = (us,vs)
@@ -239,9 +212,6 @@ class Sol_tree:
             bd = sol_grid.xbd
         diffs = np.full((len(bd),), rho_target)
         diffs = diffs - bd[:,2]
-        # print('bnd')
-        # print(diffs)
-        # print('bnd')
         
         # this is looking for the node on the boundary with rho value closest 
         # to rho_target without exceeding rho_target
@@ -357,8 +327,8 @@ class Sol_tree:
             z0 = sol_grid.grid[us  ,vs  ,:2]
             z1 = sol_grid.grid[us  ,vs+1,:2]
    
-        w2 = math_ddg.f(z2,-z0)
-        w1 = math_ddg.f(z1,-z0)
+        w2 = math.f(z2,-z0)
+        w1 = math.f(z1,-z0)
         arg1 = np.arctan2(w1[1],w1[0])
         arg2 = np.arctan2(w2[1],w2[0])
         
@@ -370,8 +340,8 @@ class Sol_tree:
         geo1 = self.create_geo(phi1, bp_val, max_len)
         geo2 = self.create_geo(phi2, bp_val, max_len)
         for i in range(max_len):
-            geo1[i,:2] = math_ddg.f(geo1[i,:2],z0)
-            geo2[i,:2] = math_ddg.f(geo2[i,:2],z0)
+            geo1[i,:2] = math.f(geo1[i,:2],z0)
+            geo2[i,:2] = math.f(geo2[i,:2],z0)
         
         # solving on new grids
         sect1 = Sol_grid(geo2, ax1, sol_grid, self.R, 'ams1')
@@ -442,13 +412,13 @@ class Mask_grid:
                 pt = self.grid[i,j,:2]
 
                 if not np.any(np.isnan(pt)):
-                    dist = math_ddg.geo_dist(pt)
+                    dist = math.geo_dist(pt)
                     if dist > self.R:
                         self.grid[i,j,:] = np.nan
 
 
 class Norm_grid:
-    def __init__(self, sol_grid, parent, sep, b0=np.zeros(3), b1=np.zeros(3), b2=np.zeros(3)):
+    def __init__(self, sol_grid, parent, sep, b0=np.zeros(3), b1=np.zeros(3), b2=np.zeros(3), test=False):
         
         self.angles = np.pi - np.copy(sol_grid.grid[:,:,2])
         
@@ -466,8 +436,11 @@ class Norm_grid:
         self.b2 = b2
         
         self.norms = np.zeros((self.rows,self.cols,3))
+        
         self.grid_solve()
-        self.angle_test()
+        
+        if test:
+            self.angle_test()
         
     def solve(self, us, vs):
         
@@ -486,29 +459,29 @@ class Norm_grid:
                     if np.all(self.b0==0):
                         n0 = np.array([0,0,1])
                         e2 = np.array([0,1,0])
-                        n1 = math_ddg.rod(n0, e2, self.sep)
+                        n1 = math.rod(n0, e2, self.sep)
                         n1 /= norm(n1)
                     
                     if np.any(self.b1 != 0) or np.all(self.b0==0):
                         v1 = np.cross(n0,n1)
-                        v2 = math_ddg.rod(v1, n0, self.angles[0,0])
+                        v2 = math.rod(v1, n0, self.angles[0,0])
                         v2 /= norm(v2)
-                        n2 = math_ddg.rod(n0, v2, self.sep)
+                        n2 = math.rod(n0, v2, self.sep)
                         
                         vv12 = np.cross(n1,n2)
                         vv12 /= norm(vv12)
-                        n12 = math_ddg.house(n0, vv12)
+                        n12 = math.house(n0, vv12)
                         n12 /= norm(n12)
                     else:
                         v1 = np.cross(n2, n0)
-                        v2 = math_ddg.rod(v1, n0, -self.angles[0,0])
+                        v2 = math.rod(v1, n0, -self.angles[0,0])
                         v2 /= norm(v2)
                         
-                        n1 = math_ddg.rod(n0, v2, -self.sep)
+                        n1 = math.rod(n0, v2, -self.sep)
                         
                         vv12 = np.cross(n1, n2)
                         vv12 /= norm(vv12)
-                        n12 = math_ddg.house(n0, vv12)
+                        n12 = math.house(n0, vv12)
                         n12 /= norm(n12)
         
                         
@@ -526,13 +499,13 @@ class Norm_grid:
                     n1 = self.norms[i,j+1,:]
                     
                     v1 = np.cross(n0,n1)
-                    v2 = math_ddg.rod(v1, n0, self.angles[i,j])
+                    v2 = math.rod(v1, n0, self.angles[i,j])
                     v2 /= norm(v2)
-                    n2 = math_ddg.rod(n0, v2, self.sep)
+                    n2 = math.rod(n0, v2, self.sep)
                     
                     vv12 = np.cross(n1, n2)
                     vv12 /= norm(vv12)
-                    n12 = math_ddg.house(n0, vv12)
+                    n12 = math.house(n0, vv12)
                     n12 /= norm(n12)
                     
                     self.norms[i+1,   j, :] = n2
@@ -546,14 +519,14 @@ class Norm_grid:
                     n2 = self.norms[i+1, j]
                     
                     v1 = np.cross(n2, n0)
-                    v2 = math_ddg.rod(v1, n0, -self.angles[i,j])
+                    v2 = math.rod(v1, n0, -self.angles[i,j])
                     v2 /= norm(v2)
                     
-                    n1 = math_ddg.rod(n0, v2, -self.sep)
+                    n1 = math.rod(n0, v2, -self.sep)
                     
                     vv12 = np.cross(n1, n2)
                     vv12 /= norm(vv12)
-                    n12 = math_ddg.house(n0, vv12)
+                    n12 = math.house(n0, vv12)
                     n12 /= norm(n12)
                     
                     self.norms[i  , j+1, :] = n1
@@ -569,7 +542,7 @@ class Norm_grid:
                     
                     vv12 = np.cross(n1, n2)
                     vv12 /= norm(vv12)
-                    n12 = math_ddg.house(n0, vv12)
+                    n12 = math.house(n0, vv12)
                     n12 /= norm(n12)
                 
                     self.norms[i+1, j+1, :] = n12
@@ -602,8 +575,8 @@ class Norm_grid:
                 if np.any(n0 != 0) and np.any(n1 != 0) and np.any(n2 != 0) and np.any(n12 != 0):
                     v1 = np.cross(n1, n0)
                     v2 = np.cross(n2, n0)
-                    a = angle(v1, v2) 
-                    a_diff = np.abs(angle(v1, v2) - self.angles[i,j])
+                    a = math.angle(v1, v2) 
+                    a_diff = np.abs(math.angle(v1, v2) - self.angles[i,j])
                     
     
                     if a_diff > 1e-8:
@@ -615,22 +588,24 @@ class Norm_grid:
                     
                     v1 = np.cross(n1, n0)
                     v2 = np.cross(n2, n0)
-                    a0 = angle(v1, v2)
+                    a0 = math.angle(v1, v2)
                     
                     v1 = np.cross(n1, n0)
                     v2 = np.cross(n1, n12)
-                    a1 = angle(v1, v2)
+                    a1 = math.angle(v1, v2)
                     
                     v1 = np.cross(n2, n0)
                     v2 = np.cross(n2, n12)
-                    a2 = angle(v1, v2)
+                    a2 = math.angle(v1, v2)
                     
                     v1 = np.cross(n12, n1)
                     v2 = np.cross(n12, n2)
-                    a12 = angle(v1, v2)
+                    a12 = math.angle(v1, v2)
                     
                     quad_angles[i,j,:] = [a0, a1, a2, a12]
-                    A = - 2 * np.pi + (a0 + a1 + a2 + a12)
+                    # Uses Gauss-Bonet to calculate the area of a quad can be
+                    # useful to see how the quad areas are changing
+                    # A = - 2 * np.pi + (a0 + a1 + a2 + a12)
         
     
 class Norm_tree:
@@ -832,21 +807,21 @@ class Surf_tree:
 
 if __name__ == '__main__':
     # Talk params bp1
-    # phi0 = np.pi/3
-    # cutoff = 2.4
-    # R = 2
-    # sep = 0.1
-    # jeff = Sol_tree(phi0, cutoff, R, sep)
-    # jeff.bp1()
+    phi0 = np.pi/3
+    cutoff = 2.4
+    R = 2
+    sep = 0.1
+    jeff = Sol_tree(phi0, cutoff, R, sep)
+    jeff.bp1()
     
     
     # Talk params bp2
-    phi0 = np.pi/6
-    cutoff = 3 * phi0
-    R = 2.5
-    sep = 0.1
-    jeff = Sol_tree(phi0, cutoff, R, sep)
-    jeff.bp2(3*phi0)
+    # phi0 = np.pi/6
+    # cutoff = 3 * phi0
+    # R = 2.5
+    # sep = 0.1
+    # jeff = Sol_tree(phi0, cutoff, R, sep)
+    # jeff.bp2(3*phi0)
     
     
     vis.plot_grid_pdisc(jeff.base, plt_bps=True, plt_bds=True, uv_lines=True)

@@ -355,7 +355,6 @@ class Arc_plot:
         
         if (norm_grid.bp_loc != None):
             us, vs = norm_grid.bp_loc
-            print('Depth:',depth, ',',us,vs)
             n = norm_grid.norms[us,vs,:]
             
             if self.depth_dis:
