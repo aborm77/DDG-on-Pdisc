@@ -32,7 +32,7 @@ def plot_grid_pdisc(sol_grid, depth=0, fig=None, ax=None, bd_sect=False,
         plt.xlabel('x')
         plt.ylabel('y')
         ax.set_aspect('equal')
-        circ_x, circ_y = geo_circ(sol_grid.r)
+        circ_x, circ_y = geo_circ(sol_grid.R)
         ax.plot(circ_x, circ_y, c='green', zorder=0)
         
     # avoids ploting points on the boundry of sectors twice

@@ -21,11 +21,11 @@ This class creates a cheby net on the p-disc given x- and y-boundary data
 and a maximal geodesic radius
 """
 class Sol_grid:
-    def __init__(self, xbd, ybd, parent, r, ams, test=False):
+    def __init__(self, xbd, ybd, parent, R, ams, test=False):
         self.xbd = xbd
         self.ybd = ybd
         self.parent = parent
-        self.r = r
+        self.R = R
         self.ams = ams
         self.rows = self.ybd.shape[0]
         self.cols = self.xbd.shape[0]
@@ -79,16 +79,16 @@ class Sol_grid:
                 z2 =  self.grid[i+1, j  , :2]
                 z12 = self.grid[i+1, j+1, :2]
                 
-                # finding alph0
+                # finding a0
                 w1 = math_ddg.f(z1,-z0)
                 w2 = math_ddg.f(z2,-z0)
-                alph0 = math_ddg.angle(w1,w2)
-                
-                # finding alph12
+                a0 = math_ddg.angle(w1,w2)
+
+                # finding a12
                 ww1 = math_ddg.f(z1,-z12)
                 ww2 = math_ddg.f(z2,-z12)
-                alph12 = math_ddg.angle(ww1,ww2)
-                
+                a12 = math_ddg.angle(ww1,ww2)
+
                 # print(math_ddg.geo_dist(ww1))
                 # print(math_ddg.geo_dist(ww2))
                 
@@ -101,28 +101,28 @@ class Sol_grid:
                 z2 =  self.grid[i+1, j  , :2]
                 z12 = self.grid[i+1, j+1, :2]
                 
-                # finding alph0
+                # finding a0
                 w1 = math_ddg.f(z1,-z0)
                 w2 = math_ddg.f(z2,-z0)
-                alph0 = math_ddg.angle(w1,w2)
-                
-                # finding alph12
+                a0 = math_ddg.angle(w1,w2)
+
+                # finding a12
                 ww1 = math_ddg.f(z1,-z12)
                 ww2 = math_ddg.f(z2,-z12)
-                alph12 = math_ddg.angle(ww1,ww2)
-                
-                # finding alph1
+                a12 = math_ddg.angle(ww1,ww2)
+
+                # finding a1
                 h1 = math_ddg.f(z12,-z1)
-                h2 = math_ddg.f(z0,-z1) 
-                alph1 = math_ddg.angle(h1,h2)
-                
-                # finding alph2
+                h2 = math_ddg.f(z0,-z1)
+                a1 = math_ddg.angle(h1,h2)
+
+                # finding a2
                 hh1 = math_ddg.f(z12,-z2)
-                hh2 = math_ddg.f(z0,-z2) 
-                alph2 = math_ddg.angle(hh1,hh2)
-                
-                a_diff1 = np.abs(alph0 - alph12)
-                a_diff2 = np.abs(alph1 - alph2)
+                hh2 = math_ddg.f(z0,-z2)
+                a2 = math_ddg.angle(hh1,hh2)
+
+                a_diff1 = np.abs(a0 - a12)
+                a_diff2 = np.abs(a1 - a2)
                 
                 if (a_diff1 > 1e-8) or (a_diff2 > 1e-8):
                     print(a_diff1)
@@ -137,12 +137,12 @@ This class preforms the branch point placement process and in doing so creates
 a tree of Sol_grid objects
 """
 class Sol_tree:
-    def __init__(self, phi0, cutoff, r, sep):
+    def __init__(self, phi0, cutoff, R, sep):
         self.phi0 = phi0
         self.cutoff = cutoff
-        self.r = r
+        self.R = R
         self.sep = sep
-        self.npts = int(np.ceil(r / sep)) +1
+        self.npts = int(np.ceil(R / sep)) +1
         
         if (phi0 >= np.pi or phi0 <=0):
             print("Error: phi0 is not in the allowed range of (0,pi)")
@@ -154,21 +154,21 @@ class Sol_tree:
         
         xbd = self.create_geo(0   , phi0, self.npts)
         ybd = self.create_geo(phi0, phi0, self.npts)
-        self.base = Sol_grid(xbd, ybd, 'base', self.r, 'ams')
+        self.base = Sol_grid(xbd, ybd, 'base', self.R, 'ams')
         
         print('Initialized a solution tree with intial grid of size ' + str(self.npts) +'x' +  str(self.npts))
     
     # Creates geodesic ray with specified lenght, angle, and sine-gordon solution data
-    def create_geo(self, arg, data, npts):
-        r = self.sep * (npts-1)
-        x = np.linspace(0, r, npts)
+    def create_geo(self, phi, rho_bd, npts):
+        ray_len = self.sep * (npts-1)
+        x = np.linspace(0, ray_len, npts)
         x = np.tanh(x/2)
         y = np.zeros(npts)
         ax = np.vstack((x,y))
-        if (arg != 0):
-            ax = np.matmul(math_ddg.rot(arg), ax)
-        phis = np.full((1, npts), data)
-        ax = np.concatenate((ax,phis), axis=0)
+        if (phi != 0):
+            ax = np.matmul(math_ddg.rot(phi), ax)
+        rho_arr = np.full((1, npts), rho_bd)
+        ax = np.concatenate((ax, rho_arr), axis=0)
             
         return ax.T
         
@@ -181,7 +181,7 @@ class Sol_tree:
         pts = np.vstack((xpts,ypts))
         
         for pt in pts:
-            if math_ddg.geo_dist(pt) < sol_grid.r:
+            if math_ddg.geo_dist(pt) < sol_grid.R:
                 return False
         return True
     
@@ -374,9 +374,9 @@ class Sol_tree:
             geo2[i,:2] = math_ddg.f(geo2[i,:2],z0)
         
         # solving on new grids
-        sect1 = Sol_grid(geo2, ax1, sol_grid, self.r, 'ams1')
-        sect2 = Sol_grid(geo1, geo2, sol_grid, self.r, 'ams')
-        sect3 = Sol_grid(ax3, geo1, sol_grid, self.r, 'ams3')
+        sect1 = Sol_grid(geo2, ax1, sol_grid, self.R, 'ams1')
+        sect2 = Sol_grid(geo1, geo2, sol_grid, self.R, 'ams')
+        sect3 = Sol_grid(ax3, geo1, sol_grid, self.R, 'ams3')
         sol_grid.children = [sect1, sect2, sect3]
         
         
@@ -428,22 +428,22 @@ class Mask_grid:
         self.grid = np.copy(sol_grid.grid)
         self.cols = sol_grid.cols
         self.rows = sol_grid.rows
-        self.r = sol_grid.r0
-        
+        self.R = sol_grid.R
+
         self.grid_mask()
         # true at pts (i,j) that are not equal to nan (i.e. the pts we want to graph)
         self.mask = np.logical_not(np.isnan(self.grid[:,:,0]))
-        
-        
+
+
     # setting points outside the geodesic radius eqaul to nan
     def grid_mask(self):
         for i in range(self.rows):
             for j in range(self.cols):
                 pt = self.grid[i,j,:2]
-                
+
                 if not np.any(np.isnan(pt)):
                     dist = math_ddg.geo_dist(pt)
-                    if dist > self.r:
+                    if dist > self.R:
                         self.grid[i,j,:] = np.nan
 
 
@@ -831,23 +831,22 @@ class Surf_tree:
 
 
 if __name__ == '__main__':
-
     # Talk params bp1
-    phi0 = np.pi/3
-    cutoff = 2.4
-    R = 2
-    sep = 0.1
-    jeff = Sol_tree(phi0, cutoff, R, sep)
-    jeff.bp1()
+    # phi0 = np.pi/3
+    # cutoff = 2.4
+    # R = 2
+    # sep = 0.1
+    # jeff = Sol_tree(phi0, cutoff, R, sep)
+    # jeff.bp1()
     
     
     # Talk params bp2
-    # phi0 = np.pi/6
-    # cutoff = 3 * phi0
-    # R = 4
-    # sep = 0.1
-    # jeff = Sol_tree(phi0, cutoff, R, sep)
-    # jeff.bp2(3*phi0)
+    phi0 = np.pi/6
+    cutoff = 3 * phi0
+    R = 2.5
+    sep = 0.1
+    jeff = Sol_tree(phi0, cutoff, R, sep)
+    jeff.bp2(3*phi0)
     
     
     vis.plot_grid_pdisc(jeff.base, plt_bps=True, plt_bds=True, uv_lines=True)
