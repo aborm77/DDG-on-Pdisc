@@ -5,9 +5,6 @@ Created on Sun Nov  3 11:22:20 2024
 @author: Ari Bormanis
 Purpose: DDG solving of the Sine-Gordon equation on the Poincare disk
 """
-
-import matplotlib.pyplot as plt
-
 import numpy as np
 from numpy.linalg import norm
 
@@ -17,8 +14,6 @@ import Pdisc_SG_vis as vis
 
 def angle(v1, v2):
     return np.arccos(np.dot(v1,v2) / (norm(v1) * norm(v2)))
-
-
         
 
 """
@@ -26,7 +21,7 @@ This class creates a cheby net on the p-disc given x- and y-boundary data
 and a maximal geodesic radius
 """
 class Sol_grid:
-    def __init__(self, xbd, ybd, parent, r, ams):
+    def __init__(self, xbd, ybd, parent, r, ams, test=False):
         self.xbd = xbd
         self.ybd = ybd
         self.parent = parent
@@ -47,8 +42,9 @@ class Sol_grid:
         
         self.old_grid = None
         
-        # self.angle_test()
-        # self.sep_test()
+        if test:
+            self.angle_test()
+            self.sep_test()
         
         
     # given boundary data on two rays creates a Chebyshev net on the Poincare disk
@@ -451,17 +447,6 @@ class Mask_grid:
                         self.grid[i,j,:] = np.nan
 
 
-class Mask_tree:
-    def __init__(self, sol_tree):
-        self.base = Mask_grid(sol_tree.base,'base')
-        self.r = sol_tree.r
-        
-        
-    # Creates a tree of masks for the purpose removing pts outside the geodesic radius
-    
-    
-    
-    
 class Norm_grid:
     def __init__(self, sol_grid, parent, sep, b0=np.zeros(3), b1=np.zeros(3), b2=np.zeros(3)):
         
@@ -471,21 +456,6 @@ class Norm_grid:
         self.npts = sol_grid.npts
         self.rows = sol_grid.rows
         self.cols = sol_grid.cols
-        
-        # if type(sol_grid.old_grid) == type(None):
-        #     self.angles = np.pi - np.copy(sol_grid.grid[:,:,2])
-            
-        #     self.bp_loc = sol_grid.bp_loc
-        #     self.npts = sol_grid.npts
-        #     self.rows = sol_grid.rows
-        #     self.cols = sol_grid.cols
-        # else:
-        #     self.angles = np.pi - np.copy(sol_grid.old_grid[:,:,2])
-        #     self.bp_loc = None
-        #     ##########################################################
-        #     self.npts = sol_grid.npts
-        #     self.rows = sol_grid.rows
-        #     self.cols = sol_grid.cols
         
         self.parent = parent
         self.children = None
@@ -635,9 +605,7 @@ class Norm_grid:
                     a = angle(v1, v2) 
                     a_diff = np.abs(angle(v1, v2) - self.angles[i,j])
                     
-                    
-                    # print('Actual angle:', a)
-                    # print('a_grid angle:', self.a_base.grid[i,j])
+    
                     if a_diff > 1e-8:
                         print('Warning! Some of the angles are incorrect')
                         print('Angle at '+'('+str(i)+','+str(j)+')'+' is wrong')
@@ -829,26 +797,12 @@ class Surf_grid:
             us, vs = self.bp_loc
             self.solve(us, self.cols - 1)
             self.solve(self.rows - 1, vs)
-            # dealing with a degenerate but very possible case
-            # if us == 0 and vs==0:
-            #     # just solving for the boundary
-            #     self.solve(1, self.cols - 1)
-            #     self.solve(self.rows - 1, 1)
-            #     self.norms[1,1:,:] = 0
-            #     self.norms[1:,1,:] = 0
-            # else:
-            #     self.solve(us, self.cols - 1)
-            #     self.solve(self.rows - 1, vs)
             
                     
-                    
-                
 class Surf_tree:
     def __init__(self, norm_tree):
         self.npts = norm_tree.npts
-        self.base = Surf_grid(norm_tree.norms_base, 'base')
-        # self.norms_base = Norm_grid(sol_tree.base, 'base', self.sep)
-        
+        self.base = Surf_grid(norm_tree.norms_base, 'base')    
         self.create_tree(norm_tree.norms_base, self.base)
         
     def create_tree(self, norm_grid, parent, depth=0):
@@ -863,9 +817,6 @@ class Surf_tree:
             us, vs = norm_grid.bp_loc
         sol_children = norm_grid.children
         
-        # , b2=parent.grid[us,vs+1,:]
-        # , b2=parent.grid[us+1,vs,:]S
-        # b0=parent.grid[us,vs,:], b1=sg1.grid[0,1,:], b2=sg3.grid[1,0,:]
         pc = parent.check
         
         sg3 = Surf_grid(sol_children[2], parent, b0=parent.grid[us,vs,:], check= pc)
@@ -880,25 +831,11 @@ class Surf_tree:
 
 
 if __name__ == '__main__':
-    # phi0 = np.pi/16
-    # jeff = Sol_tree(phi0, 2.5, 3, 0.1)
-    # 
-    # jeff = Sol_tree(np.pi/2, 2.5, 2.4, .25)
-    # jeff.bp1(max_depth=2)
-    
-    # Talk params one branch 
-    # phi0 = np.pi/2
-    # cutoff = 2
-    # R = 3
 
-    # sep = 0.1
-    # jeff = Sol_tree(phi0, cutoff, R, sep)
-    # jeff.bp1(max_depth=0)
-    
     # Talk params bp1
     phi0 = np.pi/3
-    cutoff = np.pi - 1
-    R = 3
+    cutoff = 2.4
+    R = 2
     sep = 0.1
     jeff = Sol_tree(phi0, cutoff, R, sep)
     jeff.bp1()
@@ -914,29 +851,10 @@ if __name__ == '__main__':
     
     
     vis.plot_grid_pdisc(jeff.base, plt_bps=True, plt_bds=True, uv_lines=True)
-    # # vis.plot_grid_asym(jeff.base)
-    # # vis.plot_grid_rho(jeff.base)
     
-    # norman = Norm_tree(jeff)
-    # vis.Arc_plot(norman.norms_base, depth_dis=True, plt_bps=True, plt_bds=True)
-    # # vis.Norm_plot(norman.norms_base, plt_bps=True, plt_bds=True)
+    norman = Norm_tree(jeff)
+    vis.Arc_plot(norman.norms_base, depth_dis=True, plt_bps=True, plt_bds=True)
    
+    sherman = Surf_tree(norman)
+    vis.Surf_plot(sherman.base)
     
-    # sherman = Surf_tree(norman)
-    # vis.Surf_plot(sherman.base)
-    
-    # print(norman.norms_base.children[0].children[0].norms[:,:,0])
-    # print(norman.norms_base.children[2].children[2].norms[:,:,0])
-    # print(norman.norms_base.children[0].bp_loc)
-    # print(norman.norms_base.children[2].bp_loc)
-    # vis.plot_norm_arrows(norman.norms_base, plt_bps=True, plt_bds=True)
-    # norman.sep_test()
-    # norman.norm_test()
-    # norman.angle_test()
-    
-    # vis.plot_grid_rho(jeff.base)
-    
-
-
-
-
