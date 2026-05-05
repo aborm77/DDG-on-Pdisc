@@ -6,6 +6,7 @@ Create and visualize discrete analogues of surfaces with constant negative Gauss
 
 > **"Discrete Surfaces with Constant Negative Gaussian Curvature and the Hirota Equation"**  
 > Alexander Bobenko and Ulrich Pinkall, *J. Differential Geometry* 43 (1996), 527–611.
+> Available: https://page.math.tu-berlin.de/~bobenko/papers/1996_Bob_Pin_K.pdf
 
 and
 
@@ -19,12 +20,12 @@ Why do certain strange, curly, crenelated shapes appear in nature? We hypothesiz
 and model this via an energy functional
 
 $$ \mathcal{E}_2[r] = \begin{cases}
-    \int_{\Omega} (\kappa_1^2 + \kappa_2^2) dA \text{ if }y\in W^{2,2}, \, dr\cdot dr=g\\
+    \int_{\Omega} (\kappa_1^2 + \kappa_2^2) &nbsp; dA \text{ if }y\in W^{2,2}, &nbsp; dr\cdot dr=g\\
     + \infty, \text{ else.}
     \end{cases} 
 $$
 
-where $r:\Omega \to \mathbb{R}^3$ is a surface, $\kappa_1$, $\kappa_2$ are the principle curvatures, and $g$ is the target metric. In particular, curly surfaces have a boundary that is exponentially increasing with their radius. Hence a natural choice for $g$ is a hyperbolic metric (i.e a metric that yields negative Gaussian curvature $K<0$). We choose to study surfaces with constant negative Gaussian curvature equal, $K=-1$. It appears that minimizers of this functional are non-smooth ($C^{1,1}$ or even less regular)! Therefore the normal Euler-Lagrange approach is insufficient. This motivates the...
+where $r:\Omega \to \mathbb{R}^3$ is a surface, $\kappa_1$, $\kappa_2$ are the principle curvatures, and $g$ is the target metric. In particular, curly surfaces have a boundary that is exponentially increasing with their radius. Hence a natural choice for $g$ is a hyperbolic metric (i.e a metric that yields negative Gaussian curvature $K<0$). We choose to study surfaces with constant negative Gaussian curvature $K=-1$. It appears that minimizers of this functional are non-smooth ($C^{1,1}$ or even less regular)! Therefore the normal Euler-Lagrange approach is insufficient. This motivates the...
 
 ## Discrete Differential Geometric Approach
 
@@ -42,7 +43,7 @@ $$
 which, if you squint, looks a bit like the law of cosines for a rhombus with an interior angle $\rho$ and side lengths $du$ and $dv$! Indeed, $\rho$ is the angle between coordinate lines in the smooth case. In our discrete world, we want to approximate our surface (and thus this metric) by building a Chebyshev net in a space where K=-1. The Poincare disk model of the hyperbolic plane is one such space. It is defined on the domain 
 
 $$
-D = \{(x,y)\in \R^2: x^2 + y^2 <1 \}
+D = \{(x,y)\in \mathbb{R}^2: x^2 + y^2 <1 \}
 $$
 
 with the metric
@@ -57,7 +58,7 @@ $$
 r_u = N_u \times N \text{ and } r_v = -N_v \times N
 $$
 
-where $N$ is the normal for our surface defined by $r$. Taking a first order discretization of these formula then allow us to construct a surface from the Chebyshev net on the sphere! Due to some clever integrability considerations this will create a K-surface. At a high level $\rho$ must satisfy the Sine-Gordon equation $\rho_uv = \sin \rho$ and any solution to the Sine-Gordon equation defines a surface with $K=-1$! All we have essentially done with this algorithm is create an approximation of a solution to the Sine-Gordon equation that critically satisfies discrete analogues of smooth conditions (this is the true magic of the DDG) approach. 
+where $N$ is the normal for our surface defined by $r$. Taking a first order discretization of these formula then allow us to construct a surface from the Chebyshev net on the sphere! Due to some clever integrability considerations this will create a K-surface. At a high level $\rho$ must satisfy the Sine-Gordon equation $\rho_uv = \sin \rho$ and any solution to the Sine-Gordon equation defines a surface with $K=-1$! All we have essentially done with this algorithm is create an approximation of a solution to the Sine-Gordon equation that critically satisfies discrete analogues of smooth conditions (this is the true magic of the DDG). 
 
 ## Summary
 
