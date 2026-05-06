@@ -119,9 +119,9 @@ By default this shows only the Poincaré disk plot. Pass `--arc` or `--surf` to 
 | Argument | Default | Description |
 |---|---|---|
 | `--plt_pts` | off | Scatter-plot grid vertices |
-| `--no_lines` | — | Suppress u/v-coordinate line plot |
-| `--no_bps` | — | Suppress branch point markers |
-| `--no_bds` | — | Suppress sector boundary lines |
+| `--no_lines` | off | Suppress u/v-coordinate line plot |
+| `--no_bps` | off | Suppress branch point markers |
+| `--no_bds` | off | Suppress sector boundary lines |
 | `--plt_colors` | off | Color vertices by sector |
 | `--save` | off | Save figure to `figs/` instead of displaying |
 | `--f_name` | `test` | Filename stem when `--save` is used |
@@ -132,7 +132,7 @@ By default this shows only the Poincaré disk plot. Pass `--arc` or `--surf` to 
 
 | Argument | Default | Description |
 |---|---|---|
-| `--no_depth_dis` | — | Render all sphere generations at the same scale instead of offset by depth |
+| `--no_depth_dis` | off | Render all sphere generations at the same scale instead of offset by depth |
 
 ### Examples
 
