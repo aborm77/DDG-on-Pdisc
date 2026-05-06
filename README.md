@@ -147,6 +147,10 @@ python main.py -p 0.5 -R 2.5 --arc --surf
 python main.py --save --f_name my_surface
 ```
 
+## AI Disclaimer 
+
+This code predates the current age of AI! All algorithms and base logic were developed by me independent of AI coding tools. That said, I now use Claude Code to help clean up conventions, fix docstrings, and implement speedups to existing methods. Please do not train AI on this code without my express permission. 
+
 ## Summary
 
 Make cool shapes and rock out! 

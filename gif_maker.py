@@ -7,7 +7,7 @@ Purpose: Create a gif from images
 import imageio.v3 as iio
 import os
 
-# If you are on windows remember to put '\\' for every \ in the directory
+# im_dir uses Windows path separators; change to 'figs/cut_bp1/' on Mac/Linux
 im_dir = 'figs\\cut_bp1\\'
 gif_name = 'Change_cut_bp1'
 dur = 135
