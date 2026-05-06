@@ -6,15 +6,15 @@
 
 Create and visualize discrete analogues of surfaces with constant negative Gaussian curvature! The algorithms in this repo are based on the papers 
 
-> **"Discrete Surfaces with Constant Negative Gaussian Curvature and the Hirota Equation"**  
-> Alexander Bobenko and Ulrich Pinkall, *J. Differential Geometry* 43 (1996), 527–611.
-> Available: https://page.math.tu-berlin.de/~bobenko/papers/1996_Bob_Pin_K.pdf
-
-and
-
 > **"Distributed Branch Points and the Shape of Elastic Surfaces with Constant Negative Curvature"**
 > Toby L. Shearman and Shankar C. Venkataramani, *Journal of Nonlinear Science*, vol. 31, no. 1, p. 13, Jan 2021.
 > Available: https://doi.org/10.1007/s00332-020-09657-2
+
+and
+
+> **"Discrete Surfaces with Constant Negative Gaussian Curvature and the Hirota Equation"**  
+> Alexander Bobenko and Ulrich Pinkall, *J. Differential Geometry* 43 (1996), 527–611.
+> Available: https://page.math.tu-berlin.de/~bobenko/papers/1996_Bob_Pin_K.pdf
 
 ## Smooth Theory
 
@@ -147,9 +147,42 @@ python main.py -p 0.5 -R 2.5 --arc --surf
 python main.py --save --f_name my_surface
 ```
 
+## Citation
+
+If you use this code, please cite the paper it is based on and credit the repository:
+
+**Paper:**
+```bibtex
+@Article{Shearman2021,
+    author={Shearman, Toby L.
+    and Venkataramani, Shankar C.},
+    title={{D}istributed {B}ranch {P}oints and the {S}hape of {E}lastic {S}urfaces with {C}onstant {N}egative {C}urvature},
+    journal={Journal of Nonlinear Science},
+    year={2021},
+    month={Jan},
+    day={07},
+    volume={31},
+    number={1},
+    pages={13},
+    issn={1432-1467},
+    doi={10.1007/s00332-020-09657-2},
+    url={https://doi.org/10.1007/s00332-020-09657-2}
+}
+```
+
+**Code:**
+```bibtex
+@misc{bormanis2022ksurfaces,
+  author={Bormanis, Ari},
+  title={DDG on Poincaré Disk: Discrete K-Surface Construction with Branch Points},
+  year={2022},
+  url={https://github.com/aborm77/DDG-on-Pdisc}
+}
+```
+
 ## AI Disclaimer 
 
-This code predates the current age of AI! All algorithms and base logic were developed by me independent of AI coding tools. That said, I now use Claude Code to help clean up conventions, fix docstrings, and implement speedups to existing methods. Please do not train AI on this code without my express permission. 
+This code predates the current age of AI coding agents! All algorithms and base logic were developed by me independent of AI coding tools. That said, I now use Claude Code to help clean up conventions, fix docstrings, and implement speedups to existing methods. Please do not train AI on this code without my express permission. 
 
 ## Summary
 
