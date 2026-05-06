@@ -198,35 +198,51 @@ class Arc_plot:
         
         
     def plot_arcs(self, norm_grid, depth=0):
-        """Plot the circular arcs forming the sides of each spherical rhombus in the Chebyshev net."""
+        """Plot the circular arcs forming the sides of each spherical rhombus in the Chebyshev net.
+
+        All arcs are accumulated into per-color buffers across the full recursive traversal,
+        then merged into one PolyData per color and added to the plotter in a single
+        add_mesh call each. This avoids per-arc GPU overhead from thousands of individual
+        add_mesh calls.
+        """
+        if depth == 0:
+            self._arc_buf = {'blue': [], 'red': []}
+
         c = np.array([0, 0, 0])
-        c1, c2 = 'blue', 'red'
+        scale = 1 + 0.5 * depth if self.depth_dis else 1
 
         for i in range(norm_grid.rows - 1):
             for j in range(norm_grid.cols - 1):
-                scale = 1 + 0.5 * depth if self.depth_dis else 1
-
                 n0  = scale * norm_grid.norms[i,     j, :]
                 n1  = scale * norm_grid.norms[i,   j+1, :]
                 n2  = scale * norm_grid.norms[i+1,   j, :]
                 n12 = scale * norm_grid.norms[i+1, j+1, :]
 
                 if np.any(n0 != 0) and np.any(n1 != 0) and i == 0 and not self.plt_bds:
-                    self.pl.add_mesh(pv.CircularArc(n0, n1, c, resolution=10), line_width=5, color=c1)
+                    self._arc_buf['blue'].append(pv.CircularArc(n0, n1, c, resolution=10))
                 if np.any(n0 != 0) and np.any(n2 != 0) and j == 0 and not self.plt_bds:
-                    self.pl.add_mesh(pv.CircularArc(n0, n2, c, resolution=10), line_width=5, color=c2)
+                    self._arc_buf['red'].append(pv.CircularArc(n0, n2, c, resolution=10))
                 if np.any(n2 != 0) and np.any(n12 != 0):
-                    self.pl.add_mesh(pv.CircularArc(n2, n12, c, resolution=10), line_width=5, color=c1)
+                    self._arc_buf['blue'].append(pv.CircularArc(n2, n12, c, resolution=10))
                 if np.any(n1 != 0) and np.any(n12 != 0):
-                    self.pl.add_mesh(pv.CircularArc(n1, n12, c, resolution=10), line_width=5, color=c2)
+                    self._arc_buf['red'].append(pv.CircularArc(n1, n12, c, resolution=10))
 
         if norm_grid.children is not None:
             for child in norm_grid.children:
                 self.plot_arcs(child, depth=depth+1)
+
+        if depth == 0:
+            for color, meshes in self._arc_buf.items():
+                if meshes:
+                    self.pl.add_mesh(pv.merge(meshes), line_width=5, color=color)
+            del self._arc_buf
                 
            
     def plot_bds(self, norm_grid, depth=0):
-        """Plot the sector boundary arcs in black."""
+        """Plot the sector boundary arcs in black, merged into a single mesh."""
+        if depth == 0:
+            self._bd_buf = []
+
         c = np.array([0, 0, 0])
         scale = 1 + 0.5 * depth if self.depth_dis else 1
 
@@ -234,17 +250,22 @@ class Arc_plot:
             n1  = scale * norm_grid.norms[i,   0, :]
             n11 = scale * norm_grid.norms[i+1, 0, :]
             if np.any(n1 != 0) and np.any(n11 != 0):
-                self.pl.add_mesh(pv.CircularArc(n1, n11, c, resolution=10), line_width=5, color="black")
+                self._bd_buf.append(pv.CircularArc(n1, n11, c, resolution=10))
 
         for i in range(norm_grid.cols - 1):
             n2  = scale * norm_grid.norms[0, i,   :]
             n22 = scale * norm_grid.norms[0, i+1, :]
             if np.any(n2 != 0) and np.any(n22 != 0):
-                self.pl.add_mesh(pv.CircularArc(n2, n22, c, resolution=10), line_width=5, color="black")
+                self._bd_buf.append(pv.CircularArc(n2, n22, c, resolution=10))
 
         if norm_grid.children is not None:
             for child in norm_grid.children:
                 self.plot_bds(child, depth=depth+1)
+
+        if depth == 0:
+            if self._bd_buf:
+                self.pl.add_mesh(pv.merge(self._bd_buf), line_width=5, color='black')
+            del self._bd_buf
                 
                 
     def plot_bps(self, norm_grid, depth=0):

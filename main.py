@@ -21,8 +21,8 @@ def main():
     parser = argparse.ArgumentParser(
         description='Generate branched discrete K-surfaces.')
     parser.add_argument('--phi0', '-p', type=float, default=np.pi/3)
-    parser.add_argument('--cutoff', '-c', type=float, default=2.3)
-    parser.add_argument('--radius', '-R', type=float, default=1.5)
+    parser.add_argument('--cutoff', '-c', type=float, default=2.1)
+    parser.add_argument('--radius', '-R', type=float, default=2)
     parser.add_argument('--seperation', '-s', type=float, default=0.1)
     parser.add_argument('--bp_algorithm', '-bp', type=str, default='bp1',
                         choices=['bp1','bp2'])
