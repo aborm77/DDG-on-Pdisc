@@ -104,7 +104,7 @@ By default this shows only the Poincaré disk plot. Pass `--arc` or `--surf` to 
 | `--phi0` | `-p` | `π/3` | Initial angle parameter |
 | `--cutoff` | `-c` | `2.1` | Cutoff radius for branch point placement |
 | `--radius` | `-R` | `3` | Radius of the hyperbolic disk |
-| `--seperation` | `-s` | `0.1` | Side length of all hyperbolic rhombi |
+| `--separation` | `-s` | `0.1` | Side length of all hyperbolic rhombi |
 | `--bp_algorithm` | `-bp` | `bp1` | Branch point algorithm (`bp1` or `bp2`) |
 
 ### Plots to show

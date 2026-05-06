@@ -25,7 +25,7 @@ def main():
     parser.add_argument('--phi0', '-p', type=float, default=np.pi/3)
     parser.add_argument('--cutoff', '-c', type=float, default=2.1)
     parser.add_argument('--radius', '-R', type=float, default=3)
-    parser.add_argument('--seperation', '-s', type=float, default=0.1)
+    parser.add_argument('--separation', '-s', type=float, default=0.1)
     parser.add_argument('--bp_algorithm', '-bp', type=str, default='bp1',
                         choices=['bp1', 'bp2'])
 
@@ -57,7 +57,7 @@ def main():
     phi0 = args.phi0
     cutoff = args.cutoff
     R = args.radius
-    sep = args.seperation
+    sep = args.separation
     jeff = classes.Sol_tree(phi0, cutoff, R, sep)
 
     # Interesting params for bp2
