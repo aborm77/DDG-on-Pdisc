@@ -66,17 +66,25 @@ where $N$ is the normal for our surface defined by $r$. Taking a first order dis
 
 | File | Description |
 |---|---|
-| `Pdisc_SG_classes.py` | Core implementation: all grid and tree classes for the three-stage pipeline |
-| `Pdisc_SG_math.py` | Mathematical utilities: Möbius transformations, Rodrigues rotation, Householder reflection |
-| `Pdisc_SG_vis.py` | Visualization: 2D Poincaré disk plots (matplotlib) and 3D surface/sphere plots (pyvista) |
+| `main.py` | Entry point: CLI interface for running the full pipeline |
+| `classes.py` | Core implementation: all grid and tree classes for the three-stage pipeline |
+| `math_functions.py` | Mathematical utilities: Möbius transformations, Rodrigues rotation, Householder reflection |
+| `vis.py` | Visualization: 2D Poincaré disk plots (matplotlib) and 3D surface/sphere plots (pyvista) |
 | `gif_maker.py` | Helper script for assembling figure sequences into animated GIFs |
 | `numerical_explorations/` | Parameter sweep scripts for exploring solution families |
 
 ## Dependencies
 
+Install all dependencies with:
+
+```bash
+pip install -r requirements.txt
+```
+
 - [NumPy](https://numpy.org/)
 - [Matplotlib](https://matplotlib.org/)
 - [PyVista](https://pyvista.org/)
+- [Numba](https://numba.pydata.org/)
 - [imageio](https://imageio.readthedocs.io/)
 
 ## Summary
