@@ -8,9 +8,6 @@ Implements the discrete K-surface pipeline:
 
 Based on:
 
-    Bobenko, A. I. and Pinkall, U. (1996). Discrete surfaces with constant negative
-    Gaussian curvature and the Hirota equation. J. Differential Geometry, 43, 527-611.
-
     Shearman, T. L. and Venkataramani, S. C. (2021). Distributed branch points and
     the shape of elastic surfaces with constant negative curvature. Journal of
     Nonlinear Science, 31(1), 13.
@@ -21,8 +18,7 @@ import time
 import numpy as np
 from numpy.linalg import norm
 
-import Pdisc_SG_math as math
-import Pdisc_SG_vis as vis
+import math_functions as math
 from numba import njit as _njit
 
 # Numba-JIT versions of math.py functions. Duplicated here because numba requires
@@ -345,7 +341,7 @@ class Sol_tree:
         
     
     
-    def create_sectors1(self, sol_grid):
+    def create_sectors(self, sol_grid):
         """Create the three child Sol_grid sectors that emanate from a placed branch point.
 
         The two new geodesic rays dividing the remaining region are placed at angles
@@ -422,7 +418,7 @@ class Sol_tree:
         if bp_loc is None or bp_loc == -1:
             return 
         
-        sect1, sect2, sect3 = self.create_sectors1(sol_grid)
+        sect1, sect2, sect3 = self.create_sectors(sol_grid)
         self.bp1(sol_grid=sect1, depth=depth+1, max_depth=max_depth)
         self.bp1(sol_grid=sect2, depth=depth+1, max_depth=max_depth)
         self.bp1(sol_grid=sect3, depth=depth+1, max_depth=max_depth)
@@ -432,8 +428,10 @@ class Sol_tree:
             print('Done placing branch points')
             print(f"Time taken to place branch points: {e - s:.3f}s")
             
-    def bp2(self, rho_target, sol_grid=None, depth=0, max_depth=None):
+    def bp2(self, rho_target=None, sol_grid=None, depth=0, max_depth=None):
         """Recursively apply the experimental branch point algorithm 2 to sol_grid and all descendant sectors."""
+        if rho_target is None:
+            rho_target = self.cutoff
         if sol_grid is None:
             s = time.perf_counter()
             sol_grid = self.base
@@ -443,7 +441,7 @@ class Sol_tree:
         if bp_loc is None:
             return 
         
-        sect1, sect2, sect3 = self.create_sectors1(sol_grid)
+        sect1, sect2, sect3 = self.create_sectors(sol_grid)
         self.bp2(rho_target, sol_grid=sect1, depth=depth+1, max_depth=max_depth)
         self.bp2(rho_target, sol_grid=sect2, depth=depth+1, max_depth=max_depth)
         self.bp2(rho_target, sol_grid=sect3, depth=depth+1, max_depth=max_depth)
@@ -909,32 +907,3 @@ class Surf_tree:
         
         for i in range(3):
             self.create_tree(sol_children[i], surf_children[i], depth=depth+1)
-
-
-if __name__ == '__main__':
-    # Talk params bp1
-    phi0 = np.pi/3
-    cutoff = 2.4
-    R = 2.3
-    sep = 0.1
-    jeff = Sol_tree(phi0, cutoff, R, sep)
-    jeff.bp1()
-    
-    
-    # Talk params bp2
-    # phi0 = np.pi/6
-    # cutoff = 3 * phi0
-    # R = 2.5
-    # sep = 0.1
-    # jeff = Sol_tree(phi0, cutoff, R, sep)
-    # jeff.bp2(3*phi0)
-    
-    
-    vis.plot_grid_pdisc(jeff.base, plt_bps=True, plt_bds=True, uv_lines=True)
-    
-    norman = Norm_tree(jeff)
-    vis.Arc_plot(norman.norms_base, depth_dis=True, plt_bps=True, plt_bds=True)
-   
-    sherman = Surf_tree(norman)
-    vis.Surf_plot(sherman.base)
-    
