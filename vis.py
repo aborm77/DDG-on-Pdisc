@@ -11,6 +11,7 @@ Provides one plotting class per pipeline stage:
 Author: Ari Bormanis
 """
 
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pyvista as pv
@@ -60,7 +61,9 @@ class Pdisc_plot:
 
         if save:
             fname = f_name if f_name else 'test'
-            self.fig.savefig(f'figs/{fname}.png', dpi=100)
+            path = f'figs/{fname}.png'
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            self.fig.savefig(path, dpi=100)
             plt.close(self.fig)
         else:
             plt.show()
