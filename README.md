@@ -87,6 +87,66 @@ pip install -r requirements.txt
 - [Numba](https://numba.pydata.org/)
 - [imageio](https://imageio.readthedocs.io/)
 
+## Usage
+
+Run the full pipeline from the command line:
+
+```bash
+python main.py [options]
+```
+
+By default this shows only the Poincaré disk plot. Pass `--arc` or `--surf` to enable the additional 3D plots.
+
+### Geometry / solver
+
+| Argument | Short | Default | Description |
+|---|---|---|---|
+| `--phi0` | `-p` | `π/3` | Initial angle parameter |
+| `--cutoff` | `-c` | `2.1` | Cutoff radius for branch point placement |
+| `--radius` | `-R` | `3` | Radius of the hyperbolic disk |
+| `--seperation` | `-s` | `0.1` | Side length of all hyperbolic rhombi |
+| `--bp_algorithm` | `-bp` | `bp1` | Branch point algorithm (`bp1` or `bp2`) |
+
+### Plots to show
+
+| Argument | Description |
+|---|---|
+| `--arc` | Also show the Chebyshev net on the sphere (PyVista) |
+| `--surf` | Also show the embedded K-surface in R³ (PyVista) |
+
+### Poincaré disk plot options
+
+| Argument | Default | Description |
+|---|---|---|
+| `--plt_pts` | off | Scatter-plot grid vertices |
+| `--no_lines` | — | Suppress u/v-coordinate line plot |
+| `--no_bps` | — | Suppress branch point markers |
+| `--no_bds` | — | Suppress sector boundary lines |
+| `--plt_colors` | off | Color vertices by sector |
+| `--save` | off | Save figure to `figs/` instead of displaying |
+| `--f_name` | `test` | Filename stem when `--save` is used |
+| `--pt_size` | `10` | Marker size for scatter plots |
+| `--rev` | off | Swap u/v-line colors |
+
+### Arc plot options (used with `--arc`)
+
+| Argument | Default | Description |
+|---|---|---|
+| `--no_depth_dis` | — | Render all sphere generations at the same scale instead of offset by depth |
+
+### Examples
+
+```bash
+# Poincaré disk with bp2 algorithm
+python main.py -bp bp2
+
+# All three plots with custom geometry
+python main.py -p 0.5 -R 2.5 --arc --surf
+
+# Save the disk plot to figs/my_surface.png
+python main.py --save --f_name my_surface
+```
+
 ## Summary
 
 Make cool shapes and rock out! 
