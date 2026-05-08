@@ -59,34 +59,34 @@ class Surf_create:
         return pv.PolyData(verts, faces)
     
     
-    def collect_meshes(self, surf_grid, meshes = None, depth = 0):
+    def collect_meshes(self, surf_grid, meshes=None, depth=0):
         """
-        Creates and returns a list of of meshes in the Surf_tree object using the helper 
+        Creates and returns a list of meshes in the Surf_tree object using the helper
         method sector_mesh()
         """
         if meshes is None:
             meshes = []
-            
+
         meshes.append(self.sector_mesh(surf_grid))
-        
+
         if surf_grid.children is not None:
-            self.collect_meshes(surf_grid.children[2], meshes = meshes, depth=depth+1)
-            self.collect_meshes(surf_grid.children[0], meshes = meshes, depth=depth+1)
-            self.collect_meshes(surf_grid.children[1], meshes = meshes, depth=depth+1)
-            
+            self.collect_meshes(surf_grid.children[2], meshes=meshes, depth=depth+1)
+            self.collect_meshes(surf_grid.children[0], meshes=meshes, depth=depth+1)
+            self.collect_meshes(surf_grid.children[1], meshes=meshes, depth=depth+1)
+
         return meshes
     
     
     def save(self, path):
-       """
-       Save the mesh to disk. Extension controls the format.
-       Common choices:
-           .vtk  — legacy VTK (widely supported, good for ParaView / libigl)
-           .vtp  — VTK PolyData XML (smaller files, same data)
-           .stl  — triangulated STL (quads are split; loses quad structure)
-           .obj  — Wavefront OBJ (human-readable, no binary precision)
-       """
-       self.mesh.save(path)
+        """
+        Save the mesh to disk. Extension controls the format.
+        Common choices:
+            .vtk  — legacy VTK (widely supported, good for ParaView / libigl)
+            .vtp  — VTK PolyData XML (smaller files, same data)
+            .stl  — triangulated STL (quads are split; loses quad structure)
+            .obj  — Wavefront OBJ (human-readable, no binary precision)
+        """
+        self.mesh.save(path)
        
        
     def get_vertex_degrees(self):
@@ -95,7 +95,7 @@ class Surf_create:
         points on the mesh and vertices on the mesh boundary.
         """
         # this line just makes a (n_edges,2) array of all the unique vertex labels
-        # it is just a quick way of getting arround that each line object starts with 2
+        # it is just a quick way of getting around that each line object starts with 2
         line_indices = self.edges.lines.reshape(-1, 3)[:, 1:]  
         # this counts how many times a vertex appears in the list above, which
         # is its degree

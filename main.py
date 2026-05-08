@@ -24,7 +24,7 @@ def main():
     # Geometry / solver
     parser.add_argument('--phi0', '-p', type=float, default=np.pi/3)
     parser.add_argument('--cutoff', '-c', type=float, default=2.1)
-    parser.add_argument('--radius', '-R', type=float, default=2.5)
+    parser.add_argument('--radius', '-R', type=float, default=3.2)
     parser.add_argument('--separation', '-s', type=float, default=0.1)
     parser.add_argument('--bp_algorithm', '-bp', type=str, default='bp1',
                         choices=['bp1', 'bp2'])
