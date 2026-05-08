@@ -77,6 +77,17 @@ class Surf_create:
         return meshes
     
     
+    @classmethod
+    def load(cls, path):
+        """Load a previously saved mesh from disk."""
+        obj = cls.__new__(cls)
+        obj.base = None
+        obj.mesh = pv.read(path)
+        obj.edges = obj.mesh.extract_all_edges()
+        obj.points = obj.mesh.points
+        obj.degrees = obj.get_vertex_degrees()
+        return obj
+
     def save(self, path):
         """
         Save the mesh to disk. Extension controls the format.

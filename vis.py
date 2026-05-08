@@ -314,18 +314,21 @@ class Surf_plot:
     Chebyshev net on the sphere.
     """
     def __init__(self, surf_grid, plt_bps=True, plt_bds=True, plt_surf=False, plt_wireframe=True, plt_wilmore=False, save_path=None):
-        self.grid = surf_grid.grid
-        self.surf_grid = surf_grid
-        self.surf = mesh.Surf_create(surf_grid)
+        if isinstance(surf_grid, mesh.Surf_create):
+            self.surf_grid = None
+            self.surf = surf_grid
+        else:
+            self.surf_grid = surf_grid
+            self.surf = mesh.Surf_create(surf_grid)
 
         self.pl = pv.Plotter()
 
         if plt_surf:
             self.pl.add_mesh(self.surf.mesh, show_edges=True, line_width=1)
-        if plt_wireframe:
-            self.plot_wireframe(surf_grid)
-        if plt_bds:
-            self.plot_bds(surf_grid)
+        if plt_wireframe and self.surf_grid is not None:
+            self.plot_wireframe(self.surf_grid)
+        if plt_bds and self.surf_grid is not None:
+            self.plot_bds(self.surf_grid)
         if plt_bps:
             self.plot_bps()
         if save_path is not None:

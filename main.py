@@ -13,6 +13,7 @@ described in:
 Author: Ari Bormanis
 """
 import classes
+import mesh
 import vis
 import numpy as np
 import argparse
@@ -24,7 +25,7 @@ def main():
     # Geometry / solver
     parser.add_argument('--phi0', '-p', type=float, default=np.pi/3)
     parser.add_argument('--cutoff', '-c', type=float, default=2.1)
-    parser.add_argument('--radius', '-R', type=float, default=2.2)
+    parser.add_argument('--radius', '-R', type=float, default=2.5)
     parser.add_argument('--separation', '-s', type=float, default=0.1)
     parser.add_argument('--bp_algorithm', '-bp', type=str, default='bp1',
                         choices=['bp1', 'bp2'])
@@ -64,9 +65,16 @@ def main():
     parser.add_argument('--f_type_surf', type=str, default='vtk',
                         help='file name type surface, choices: vkt, vtp, stl, obj')
     parser.set_defaults(save_surf=False)
-
+    parser.add_argument('--load_surf', type=str, default=None,
+                        help='path to a saved mesh file to load and plot directly')
 
     args = parser.parse_args()
+
+    if args.load_surf:
+        loaded = mesh.Surf_create.load(args.load_surf)
+        vis.Surf_plot(loaded, plt_bps=args.plt_bps,
+                      plt_surf=True, plt_wireframe=False, plt_bds=False)
+        return
 
     # If you are viewing this in an IDE you can change the main parameters here
     phi0 = args.phi0
@@ -74,7 +82,7 @@ def main():
     R = args.radius
     sep = args.separation
     jeff = classes.Sol_tree(phi0, cutoff, R, sep)
-    
+
     args.surf = True
 
     # Interesting params for bp2
