@@ -1,18 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Visualization for the DDG K-surface pipeline on the Poincaré disk.
-
-Provides one plotting class per pipeline stage:
-
-    Pdisc_plot  — Chebyshev net on the Poincaré disk (matplotlib)
-    Arc_plot    — Chebyshev net on the unit sphere (PyVista)
-    Surf_plot   — embedded surface in R³ (PyVista)
+This file creates the mesh for the actual surface in R³. Allows saving of meshes.
 
 Author: Ari Bormanis
 """
 
-import os
-import matplotlib.pyplot as plt
 import numpy as np
 import pyvista as pv
                     
@@ -23,25 +15,23 @@ class Surf_create:
     Chebyshev net on the sphere.
     """
     def __init__(self, surf_grid):
-        self.grid = surf_grid.grid
+        self.base = surf_grid
+        meshes = self.collect_meshes(self.base)
+        self.mesh = pv.merge(meshes).clean(tolerance=1e-10, absolute=True)
+        self.edges = self.mesh.extract_all_edges()
+        self.points = self.mesh.points
+        self.degrees = self.get_vertex_degrees()
         
         
     def sector_mesh(self, surf_grid):
-        pass
+        """
+        Creates a mesh for surf_grid and returns it as a pv.PolyData object
+        """
+        verts = []
+        faces = []
+        grid = surf_grid.grid
         
-
-    def create_pt_ar(self, surf_grid):
-        """Return a list of all non-NaN vertex positions in surf_grid."""
-        pts = []
-        for i in range(surf_grid.rows):
-            for j in range(surf_grid.cols):
-                r = surf_grid.grid[i, j, :]
-                if not np.any(np.isnan(r)):
-                    pts.append(r)
-        return pts
-
-    def create_pt_map(self, surf_grid):
-        """Return a dict mapping each non-NaN vertex (by bytes key) to its index in create_pt_ar."""
+        # Creates a dictionary of vertex labels for the current sector
         pt_map = {}
         n = 0
         for i in range(surf_grid.rows):
@@ -49,16 +39,8 @@ class Surf_create:
                 r = surf_grid.grid[i, j, :]
                 if not np.any(np.isnan(r)):
                     pt_map[r.tobytes()] = n
+                    verts.append(r)
                     n += 1
-        return pt_map
-
-    def create_mesh(self, surf_grid, depth=0):
-        """Build a pyvista PolyData mesh from surf_grid quads"""
-        verts = self.create_pt_ar(surf_grid)
-        pt_map = self.create_pt_map(surf_grid)
-
-        faces = []
-        grid = surf_grid.grid
 
         for i in range(surf_grid.rows - 1):
             for j in range(surf_grid.cols - 1):
@@ -72,9 +54,53 @@ class Surf_create:
                     faces.append([4, pt_map[r0.tobytes()], pt_map[r1.tobytes()],
                                   pt_map[r12.tobytes()], pt_map[r2.tobytes()]])
 
-        self.pl.add_mesh(pv.PolyData(verts, faces))
-
+        return pv.PolyData(verts, faces)
+    
+    
+    def collect_meshes(self, surf_grid, meshes = None, depth = 0):
+        """
+        Creates and returns a list of of meshes in the Surf_tree object using the helper 
+        method sector_mesh()
+        """
+        if meshes is None:
+            meshes = []
+            
+        meshes.append(self.sector_mesh(surf_grid))
+        
         if surf_grid.children is not None:
-            self.poly_plot(surf_grid.children[2], depth=depth+1)
-            self.poly_plot(surf_grid.children[0], depth=depth+1)
-            self.poly_plot(surf_grid.children[1], depth=depth+1)
+            self.collect_meshes(surf_grid.children[2], meshes = meshes, depth=depth+1)
+            self.collect_meshes(surf_grid.children[0], meshes = meshes, depth=depth+1)
+            self.collect_meshes(surf_grid.children[1], meshes = meshes, depth=depth+1)
+            
+        return meshes
+    
+    
+    def save(self, path):
+       """
+       Save the mesh to disk. Extension controls the format.
+       Common choices:
+           .vtk  — legacy VTK (widely supported, good for ParaView / libigl)
+           .vtp  — VTK PolyData XML (smaller files, same data)
+           .stl  — triangulated STL (quads are split; loses quad structure)
+           .obj  — Wavefront OBJ (human-readable, no binary precision)
+       """
+       self.mesh.save(path)
+       
+       
+    def get_vertex_degrees(self):
+        """
+        Computes the degrees of all vertices. Useful for quickly finding branch
+        points on the mesh and vertices on the mesh boundary.
+        """
+        # this line just makes a (n_edges,2) array of all the unique vertex labels
+        # it is just a quick way of getting arround that each line object starts with 2
+        line_indices = self.edges.lines.reshape(-1, 3)[:, 1:]  
+        # this counts how many times a vertex appears in the list above, which
+        # is its degree
+        degrees = np.bincount(line_indices.flatten(), minlength = self.mesh.n_points)
+        return degrees
+
+    
+    
+    
+        

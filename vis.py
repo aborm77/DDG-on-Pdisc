@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pyvista as pv
 
+import mesh 
+
 
 def geo_circ(R):
     """Return (x, y) points on the geodesic circle of hyperbolic radius R in the first quadrant."""
@@ -297,34 +299,27 @@ class Surf_plot:
     """
     def __init__(self, surf_grid, plt_bps=False, plt_bds=False, depth_dis=False):
         self.grid = surf_grid.grid
+        self.surf = mesh.Surf_create(surf_grid)
 
         self.pl = pv.Plotter()
-        self.poly_plot(surf_grid)
+        self.pl.add_mesh(self.surf.mesh, show_edges=True, line_width=1)
+        self.plot_bps()
         self.pl.add_axes()
         self.pl.show()
 
-    def create_pt_ar(self, surf_grid):
-        """Return a list of all non-NaN vertex positions in surf_grid."""
-        pts = []
-        for i in range(surf_grid.rows):
-            for j in range(surf_grid.cols):
-                r = surf_grid.grid[i, j, :]
-                if not np.any(np.isnan(r)):
-                    pts.append(r)
-        return pts
 
-    def create_pt_map(self, surf_grid):
-        """Return a dict mapping each non-NaN vertex (by bytes key) to its index in create_pt_ar."""
-        pt_map = {}
-        n = 0
-        for i in range(surf_grid.rows):
-            for j in range(surf_grid.cols):
-                r = surf_grid.grid[i, j, :]
-                if not np.any(np.isnan(r)):
-                    pt_map[r.tobytes()] = n
-                    n += 1
-        return pt_map
+    def plot_bps(self):
+        """Plots all branch points by considering vertex connectivity"""
+        bp_mask = self.surf.degrees > 4
+        bps = self.surf.points[bp_mask]
 
+        if len(bps) > 0:
+            self.pl.add_points(bps,
+                               color='red',
+                               point_size=10,
+                               render_points_as_spheres=True)
+
+        
     def poly_plot(self, surf_grid, depth=0):
         """Build a pyvista PolyData mesh from surf_grid quads and add it to the plotter."""
         verts = self.create_pt_ar(surf_grid)
