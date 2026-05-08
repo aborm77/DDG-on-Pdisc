@@ -16,8 +16,10 @@ class Surf_create:
     """
     def __init__(self, surf_grid):
         self.base = surf_grid
+        
         meshes = self.collect_meshes(self.base)
         self.mesh = pv.merge(meshes).clean(tolerance=1e-10, absolute=True)
+        
         self.edges = self.mesh.extract_all_edges()
         self.points = self.mesh.points
         self.degrees = self.get_vertex_degrees()
