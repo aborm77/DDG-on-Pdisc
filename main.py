@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Main file that allows one to plot K-surfaces and their underlying Chebyshev nets
-on the Poincaré disk and sphere. Defaults to plotting the Poincaré disk only.
+on the Poincaré disk and sphere. Defaults to plotting the Poincaré disk and the
+K-surface as an asymptotic coordinate wireframe.
 
 Implements the geometric operations underlying the discrete K-surface construction
 described in:
@@ -30,12 +31,9 @@ def main():
     parser.add_argument('--bp_algorithm', '-bp', type=str, default='bp1',
                         choices=['bp1', 'bp2'])
 
-    # Which plots to show (Pdisc is always shown)
+    # Which plots to show (Pdisc and surface are always shown)
     parser.add_argument('--arc', action='store_true',
                         help='also show the spherical arc plot')
-    parser.add_argument('--surf', action='store_true',
-                        help='also show the R³ surface plot')
-
     # Pdisc_plot options
     parser.add_argument('--plt_pts', action='store_true')
     parser.add_argument('--no_lines', dest='plt_lines', action='store_false')
@@ -83,8 +81,6 @@ def main():
     sep = args.separation
     jeff = classes.Sol_tree(phi0, cutoff, R, sep)
 
-    args.surf = True
-
     # Interesting params for bp2
     # phi0 = np.pi/6
     # cutoff = 3 * phi0
@@ -102,22 +98,20 @@ def main():
                    plt_bds=args.plt_bds, save=args.save,
                    f_name=args.f_name, pt_size=args.pt_size, rev=args.rev)
 
-    if args.arc or args.surf:
-        norman = classes.Norm_tree(jeff)
-        if args.arc:
-            vis.Arc_plot(norman.norms_base,
-                         plt_bps=args.plt_bps, plt_bds=args.plt_bds,
-                         depth_dis=args.depth_dis)
-        if args.surf:
-            sherman = classes.Surf_tree(norman)
-            if args.save_surf:
-                f_path = f'meshes/{args.f_name_surf}.{args.f_type_surf}'
-            else:
-                f_path = None
-            vis.Surf_plot(sherman.base,
-                          plt_bps=args.plt_bps, plt_bds=args.plt_bds,
-                          plt_surf=args.plt_surf, plt_wireframe=args.plt_wireframe,
-                          save_path=f_path)
+    norman = classes.Norm_tree(jeff)
+    if args.arc:
+        vis.Arc_plot(norman.norms_base,
+                     plt_bps=args.plt_bps, plt_bds=args.plt_bds,
+                     depth_dis=args.depth_dis)
+    sherman = classes.Surf_tree(norman)
+    if args.save_surf:
+        f_path = f'meshes/{args.f_name_surf}.{args.f_type_surf}'
+    else:
+        f_path = None
+    vis.Surf_plot(sherman.base,
+                  plt_bps=args.plt_bps, plt_bds=args.plt_bds,
+                  plt_surf=args.plt_surf, plt_wireframe=args.plt_wireframe,
+                  save_path=f_path)
 
 if __name__ == '__main__':
     main()
