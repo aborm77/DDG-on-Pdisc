@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Main file that allows one to plot K-surfaces and their underlying Chebyshev nets
-on the Poincaré disk and sphere. Defaults to plotting the Poincaré disk only.
+on the Poincaré disk and sphere. Defaults to plotting the Poincaré disk and the
+K-surface as an asymptotic coordinate wireframe.
 
 Implements the geometric operations underlying the discrete K-surface construction
 described in:
@@ -13,6 +14,7 @@ described in:
 Author: Ari Bormanis
 """
 import classes
+import mesh
 import vis
 import numpy as np
 import argparse
@@ -24,17 +26,14 @@ def main():
     # Geometry / solver
     parser.add_argument('--phi0', '-p', type=float, default=np.pi/3)
     parser.add_argument('--cutoff', '-c', type=float, default=2.1)
-    parser.add_argument('--radius', '-R', type=float, default=3)
+    parser.add_argument('--radius', '-R', type=float, default=2.5)
     parser.add_argument('--separation', '-s', type=float, default=0.1)
     parser.add_argument('--bp_algorithm', '-bp', type=str, default='bp1',
                         choices=['bp1', 'bp2'])
 
-    # Which plots to show (Pdisc is always shown)
+    # Which plots to show (Pdisc and surface are always shown)
     parser.add_argument('--arc', action='store_true',
                         help='also show the spherical arc plot')
-    parser.add_argument('--surf', action='store_true',
-                        help='also show the R³ surface plot')
-
     # Pdisc_plot options
     parser.add_argument('--plt_pts', action='store_true')
     parser.add_argument('--no_lines', dest='plt_lines', action='store_false')
@@ -51,7 +50,29 @@ def main():
     parser.add_argument('--no_depth_dis', dest='depth_dis', action='store_false')
     parser.set_defaults(depth_dis=True)
 
+    # Surf_plot options
+    parser.add_argument('--plt_surf_mesh', dest='plt_surf', action='store_true',
+                        help='show the solid surface mesh')
+    parser.add_argument('--no_wireframe', dest='plt_wireframe', action='store_false',
+                        help='hide the u/v wireframe lines')
+    parser.set_defaults(plt_surf=False, plt_wireframe=True)
+    parser.add_argument('--save_surf', dest='save_surf', action='store_true',
+                        help='saves the surface, defaults to vtk')
+    parser.add_argument('--f_name_surf', type=str, default='test',
+                        help='file name for the surface')
+    parser.add_argument('--f_type_surf', type=str, default='vtk',
+                        help='file name type surface, choices: vkt, vtp, stl, obj')
+    parser.set_defaults(save_surf=False)
+    parser.add_argument('--load_surf', type=str, default=None,
+                        help='path to a saved mesh file to load and plot directly')
+
     args = parser.parse_args()
+
+    if args.load_surf:
+        loaded = mesh.Surf_create.load(args.load_surf)
+        vis.Surf_plot(loaded, plt_bps=args.plt_bps,
+                      plt_surf=True, plt_wireframe=False, plt_bds=False)
+        return
 
     # If you are viewing this in an IDE you can change the main parameters here
     phi0 = args.phi0
@@ -77,15 +98,20 @@ def main():
                    plt_bds=args.plt_bds, save=args.save,
                    f_name=args.f_name, pt_size=args.pt_size, rev=args.rev)
 
-    if args.arc or args.surf:
-        norman = classes.Norm_tree(jeff)
-        if args.arc:
-            vis.Arc_plot(norman.norms_base,
-                         plt_bps=args.plt_bps, plt_bds=args.plt_bds,
-                         depth_dis=args.depth_dis)
-        if args.surf:
-            sherman = classes.Surf_tree(norman)
-            vis.Surf_plot(sherman.base)
+    norman = classes.Norm_tree(jeff)
+    if args.arc:
+        vis.Arc_plot(norman.norms_base,
+                     plt_bps=args.plt_bps, plt_bds=args.plt_bds,
+                     depth_dis=args.depth_dis)
+    sherman = classes.Surf_tree(norman)
+    if args.save_surf:
+        f_path = f'meshes/{args.f_name_surf}.{args.f_type_surf}'
+    else:
+        f_path = None
+    vis.Surf_plot(sherman.base,
+                  plt_bps=args.plt_bps, plt_bds=args.plt_bds,
+                  plt_surf=args.plt_surf, plt_wireframe=args.plt_wireframe,
+                  save_path=f_path)
 
 if __name__ == '__main__':
     main()

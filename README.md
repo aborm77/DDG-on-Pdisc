@@ -70,8 +70,14 @@ where $N$ is the normal for our surface defined by $r$. Taking a first order dis
 | `classes.py` | Core implementation: all grid and tree classes for the three-stage pipeline |
 | `math_functions.py` | Mathematical utilities: Möbius transformations, Rodrigues rotation, Householder reflection |
 | `vis.py` | Visualization: 2D Poincaré disk plots (matplotlib) and 3D surface/sphere plots (pyvista) |
+| `mesh.py` | Mesh construction and I/O: builds, saves, and loads pyvista surface meshes |
 | `gif_maker.py` | Helper script for assembling figure sequences into animated GIFs |
 | `numerical_explorations/` | Parameter sweep scripts for exploring solution families |
+| `meshes/` | Pre-built mesh files (`.vtk` and `.stl`) ready to download and explore |
+
+## Meshes
+
+Starter meshes are included directly in the `meshes/` folder, organized into `vtk_surfs/` and `stl_surfs/` subfolders. Each mesh is labeled by the number of generations of branch points it contains. Larger meshes that exceed reasonable repository size limits are available on the [v1.0.0 release page](https://github.com/aborm77/DDG-on-Pdisc/releases/tag/v1.0.0).
 
 ## Dependencies
 
@@ -95,7 +101,7 @@ Run the full pipeline from the command line:
 python main.py [options]
 ```
 
-By default this shows only the Poincaré disk plot. Pass `--arc` or `--surf` to enable the additional 3D plots.
+By default this shows the Poincaré disk plot and the K-surface in R³ as a wireframe of asymptotic coordinate lines (red and blue). Pass `--arc` to also show the intermediate spherical arc plot.
 
 ### Geometry / solver
 
@@ -103,7 +109,7 @@ By default this shows only the Poincaré disk plot. Pass `--arc` or `--surf` to 
 |---|---|---|---|
 | `--phi0` | `-p` | `π/3` | Initial angle parameter |
 | `--cutoff` | `-c` | `2.1` | Cutoff radius for branch point placement |
-| `--radius` | `-R` | `3` | Radius of the hyperbolic disk |
+| `--radius` | `-R` | `2.5` | Radius of the hyperbolic disk |
 | `--separation` | `-s` | `0.1` | Side length of all hyperbolic rhombi |
 | `--bp_algorithm` | `-bp` | `bp1` | Branch point algorithm (`bp1` or `bp2`) |
 
@@ -112,7 +118,6 @@ By default this shows only the Poincaré disk plot. Pass `--arc` or `--surf` to 
 | Argument | Description |
 |---|---|
 | `--arc` | Also show the Chebyshev net on the sphere (PyVista) |
-| `--surf` | Also show the embedded K-surface in R³ (PyVista) |
 
 ### Poincaré disk plot options
 
@@ -134,14 +139,39 @@ By default this shows only the Poincaré disk plot. Pass `--arc` or `--surf` to 
 |---|---|---|
 | `--no_depth_dis` | off | Render all sphere generations at the same scale instead of offset by depth |
 
+### Surface plot options
+
+| Argument | Default | Description |
+|---|---|---|
+| `--plt_surf_mesh` | off | Overlay the solid quad surface mesh |
+| `--no_wireframe` | off | Suppress the asymptotic coordinate wireframe |
+| `--no_bps` | off | Suppress branch point markers on the surface (shared with Poincaré disk) |
+| `--no_bds` | off | Suppress sector boundary lines on the surface (shared with Poincaré disk) |
+| `--save_surf` | off | Save the mesh to `meshes/` |
+| `--f_name_surf` | `test` | Filename stem when `--save_surf` is used |
+| `--f_type_surf` | `vtk` | File format: `vtk`, `vtp`, `stl`, `obj` |
+| `--load_surf` | — | Path to a saved mesh file; skips the pipeline and plots directly |
+
 ### Examples
 
 ```bash
-# Poincaré disk with bp2 algorithm
-python main.py -bp bp2
+# Default: Poincaré disk + asymptotic coordinate wireframe on the surface
+python main.py
 
-# All three plots with custom geometry
-python main.py -p 0.5 -R 2.5 --arc --surf
+# Solid surface mesh only (no wireframe)
+python main.py --plt_surf_mesh --no_wireframe
+
+# Solid mesh with wireframe overlaid
+python main.py --plt_surf_mesh
+
+# Custom geometry with the arc plot
+python main.py -p 0.5 -R 2.5 --arc
+
+# Save the surface mesh to meshes/my_surface.vtk
+python main.py --save_surf --f_name_surf my_surface
+
+# Load and plot a previously saved mesh (no pipeline needed)
+python main.py --load_surf meshes/my_surface.vtk
 
 # Save the disk plot to figs/my_surface.png
 python main.py --save --f_name my_surface
