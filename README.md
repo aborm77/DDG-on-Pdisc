@@ -75,6 +75,10 @@ where $N$ is the normal for our surface defined by $r$. Taking a first order dis
 | `numerical_explorations/` | Parameter sweep scripts for exploring solution families |
 | `meshes/` | Pre-built mesh files (`.vtk`) ready to download and explore |
 
+## Meshes
+
+Starter meshes are included directly in the `meshes/` folder, organized into `vtk/` and `stl/` subfolders. Each mesh is labeled by the number of generations of branch points it contains. Larger meshes that exceed reasonable repository size limits are available on the [v1.0.0 release page](https://github.com/aborm77/DDG-on-Pdisc/releases/tag/v1.0.0).
+
 ## Dependencies
 
 Install all dependencies with:
