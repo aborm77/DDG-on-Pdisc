@@ -340,6 +340,8 @@ class Surf_plot:
             
         self.pl.add_axes()
         self.pl.show()
+        
+        print(self.pl.camera_position)
 
 
     def plot_bps(self):
