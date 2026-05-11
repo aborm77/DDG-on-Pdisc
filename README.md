@@ -1,9 +1,7 @@
 # Creating K-Surfaces with Branch Points
 
 <p align="center">
-  <img src="gifs/grow_pdisc.gif" width="30%" alt="Poincaré disk growing">
-  <img src="gifs/grow_sphere.gif" width="30%" alt="Sphere net growing">
-  <img src="gifs/grow_surf.gif" width="30%" alt="K-surface growing">
+  <img src="gifs/grow_combined.gif" width="90%" alt="Poincaré disk, sphere net, and K-surface growing">
 </p>
 
 Create and visualize discrete analogues of surfaces with constant negative Gaussian curvature! The algorithms in this repo are based on the papers 
