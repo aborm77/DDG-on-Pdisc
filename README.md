@@ -1,7 +1,9 @@
 # Creating K-Surfaces with Branch Points
 
 <p align="center">
-  <img src="gifs/old/Change_angle_bps_bndry.gif" width="65%" alt="K-surface with branch points animating over varying angle parameter">
+  <img src="gifs/grow_pdisc.gif" width="30%" alt="Poincaré disk growing">
+  <img src="gifs/grow_sphere.gif" width="30%" alt="Sphere net growing">
+  <img src="gifs/grow_surf.gif" width="30%" alt="K-surface growing">
 </p>
 
 Create and visualize discrete analogues of surfaces with constant negative Gaussian curvature! The algorithms in this repo are based on the papers 
@@ -217,3 +219,8 @@ This code predates the current age of AI coding agents! All algorithms and base 
 ## Summary
 
 Make cool shapes and rock out! 
+
+<p align="center">
+  <img src="gifs/rotate_surf_wire.gif" width="45%" alt="Rotating wireframe K-surface">
+  <img src="gifs/rotate_surf.gif" width="45%" alt="Rotating solid K-surface">
+</p>

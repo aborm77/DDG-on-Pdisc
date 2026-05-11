@@ -230,13 +230,12 @@ def rotate_surf(R, n_frames, out_dir, phi0=np.pi/3, cutoff=2.1, sep=0.1):
         )
         pl = pv.Plotter(off_screen=True)
 
-        pl.add_mesh(surf.mesh, show_edges=True, line_width=1)
+        pl.add_mesh(surf.mesh, show_edges=False)
 
         sp = vis.Surf_plot.__new__(vis.Surf_plot)
         sp.surf = surf
         sp.pl = pl
         sp.surf_grid = sherman.base
-        sp.plot_bds(sherman.base)
         sp.plot_bps()
 
         pl.camera_position = [cam_pos, tuple(center), (0, 0, 1)]
@@ -250,14 +249,14 @@ def rotate_surf(R, n_frames, out_dir, phi0=np.pi/3, cutoff=2.1, sep=0.1):
 if __name__ == '__main__':
     R_values = np.round(np.linspace(1, 4.5, 36),1)
 
-    sweep_pdisc(R_values, 'grow_pdisc', phi0=np.pi/4, cutoff=2.4, sep=0.1)
-    make_gif(os.path.join(_FIGS_DIR, 'grow_pdisc'), 'grow_pdisc', dur=150, gif_dir=_GIFS_DIR)
+    # sweep_pdisc(R_values, 'grow_pdisc', phi0=np.pi/4, cutoff=2.4, sep=0.1)
+    # make_gif(os.path.join(_FIGS_DIR, 'grow_pdisc'), 'grow_pdisc', dur=150, gif_dir=_GIFS_DIR)
 
-    sweep_sphere(R_values, 'grow_sphere', phi0=np.pi/4, cutoff=2.4, sep=0.1)
-    make_gif(os.path.join(_FIGS_DIR, 'grow_sphere'), 'grow_sphere', dur=150, gif_dir=_GIFS_DIR)
+    # sweep_sphere(R_values, 'grow_sphere', phi0=np.pi/4, cutoff=2.4, sep=0.1)
+    # make_gif(os.path.join(_FIGS_DIR, 'grow_sphere'), 'grow_sphere', dur=150, gif_dir=_GIFS_DIR)
 
-    sweep_surf(R_values, 'grow_surf', phi0=np.pi/4, cutoff=2.4, sep=0.1)
-    make_gif(os.path.join(_FIGS_DIR, 'grow_surf'), 'grow_surf', dur=150, gif_dir=_GIFS_DIR)
+    # sweep_surf(R_values, 'grow_surf', phi0=np.pi/4, cutoff=2.4, sep=0.1)
+    # make_gif(os.path.join(_FIGS_DIR, 'grow_surf'), 'grow_surf', dur=150, gif_dir=_GIFS_DIR)
 
     rotate_surf(3, 60, 'rotate_surf', phi0=np.pi/4, cutoff=2.4, sep=0.1)
     make_gif(os.path.join(_FIGS_DIR, 'rotate_surf'), 'rotate_surf', dur=120, gif_dir=_GIFS_DIR)
