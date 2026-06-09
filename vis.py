@@ -365,7 +365,7 @@ class Surf_plot:
             self._uv_buf = {'red': [], 'blue': []}
 
         grid = surf_grid.grid
-        c1, c2 = ('blue', 'red') if not rev else ('red', 'blue')
+        c1, c2 = ('blue', 'red') 
 
         for j in range(1, grid.shape[1]):
             for seg in _valid_segments(grid[:, j, :]):

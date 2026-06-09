@@ -562,7 +562,7 @@ class Norm_grid:
                     self.norms[0,1,:] = n1
                     self.norms[1,0,:] = n2
                     self.norms[1,1,:] = n12
-                # This allows us to create the first row of quads
+                # This allows us to create the first column of quads
                 elif (j == 0):
                     if np.any(self.norms[i+1, j, :] != 0):
                         continue
@@ -582,7 +582,7 @@ class Norm_grid:
                     
                     self.norms[i+1,   j, :] = n2
                     self.norms[i+1, j+1, :] = n12
-                # this allows us to create the first column of quads
+                # this allows us to create the first row of quads
                 elif (i==0):
                     if np.any(self.norms[i, j+1, :] != 0):
                         continue
