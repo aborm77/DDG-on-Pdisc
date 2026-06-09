@@ -21,6 +21,34 @@ import numpy as np
 import argparse
 
 
+def _make_tiling_transforms(n):
+    """Build the 2n transform functions for a full disk tiling with phi0 = pi/n.
+
+    Even-index copies are pure rotations around the z-axis; odd-index copies
+    additionally reflect through the xy-plane (z -> -z) before rotating.
+    """
+    transforms = []
+    for k in range(2 * n):
+        angle = k * np.pi / n
+        ca, sa = np.cos(angle), np.sin(angle)
+        ref = (k % 2 == 1)
+
+        def make_t(ca=ca, sa=sa, ref=ref):
+            def t(pts):
+                out = pts.copy()
+                if ref:
+                    out[:, 2] = -out[:, 2]
+                x = ca * out[:, 0] - sa * out[:, 1]
+                y = sa * out[:, 0] + ca * out[:, 1]
+                out[:, 0] = x
+                out[:, 1] = y
+                return out
+            return t
+
+        transforms.append((make_t(), ref))
+    return transforms
+
+
 def _prune_trees(sol_grid, surf_grid, R):
     """NaN-mask every grid point whose geodesic distance from the origin is >= R.
 
@@ -63,6 +91,10 @@ def main():
     # Pruning
     parser.add_argument('--prune', action='store_true',
                         help='hide all points with geodesic radius >= R')
+
+    # Full tiling
+    parser.add_argument('--full', type=int, default=None, metavar='N',
+                        help='tile the surface 2N times to fill the hyperbolic disk (use with phi0=pi/N)')
 
     # Which plots to show (Pdisc and surface are always shown)
     parser.add_argument('--arc', action='store_true',
@@ -144,10 +176,11 @@ def main():
         f_path = f'meshes/{args.f_name_surf}.{args.f_type_surf}'
     else:
         f_path = None
+    tiling_transforms = _make_tiling_transforms(args.full) if args.full is not None else None
     vis.Surf_plot(sherman.base,
                   plt_bps=args.plt_bps, plt_bds=args.plt_bds,
                   plt_surf=args.plt_surf, plt_wireframe=args.plt_wireframe,
-                  save_path=f_path)
+                  save_path=f_path, tiling_transforms=tiling_transforms)
 
 if __name__ == '__main__':
     main()
