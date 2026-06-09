@@ -56,6 +56,8 @@ class Surf_create:
                     faces.append([4, pt_map[r0.tobytes()], pt_map[r1.tobytes()],
                                   pt_map[r12.tobytes()], pt_map[r2.tobytes()]])
 
+        if not verts or not faces:
+            return pv.PolyData()
         return pv.PolyData(verts, faces)
     
     
