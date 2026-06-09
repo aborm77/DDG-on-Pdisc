@@ -16,8 +16,65 @@ Author: Ari Bormanis
 import classes
 import mesh
 import vis
+import math_functions as mf
 import numpy as np
 import argparse
+
+
+def _make_tiling_transforms(n):
+    """Build the 2n transform functions for a full disk tiling with phi0 = pi/n.
+
+    Even-index copies are pure rotations around the z-axis; odd-index copies
+    additionally reflect through the xy-plane (z -> -z) before rotating.
+    """
+    transforms = []
+    for k in range(2 * n):
+        angle = k * np.pi / n
+        ca, sa = np.cos(angle), np.sin(angle)
+        ref = (k % 2 == 1)
+
+        def make_t(ca=ca, sa=sa, ref=ref):
+            def t(pts):
+                out = pts.copy()
+                if ref:
+                    out[:, 2] = -out[:, 2]
+                x = ca * out[:, 0] - sa * out[:, 1]
+                y = sa * out[:, 0] + ca * out[:, 1]
+                out[:, 0] = x
+                out[:, 1] = y
+                return out
+            return t
+
+        transforms.append((make_t(), ref))
+    return transforms
+
+
+def _prune_trees(sol_grid, surf_grid, R):
+    """NaN-mask every grid point whose geodesic distance from the origin is >= R.
+
+    Walks the Sol_grid and Surf_grid trees in parallel (they share the same
+    topology) so the same spatial mask applies to both the Poincaré disk plot
+    and the R³ surface/mesh.
+
+    When surf_grid.check=True the normal field was transposed during Surf_grid
+    construction, so surf_grid.grid[i, j] corresponds to sol_grid.grid[j, i].
+    We account for this by swapping the surface indices in that case.
+    """
+    for i in range(sol_grid.rows):
+        for j in range(sol_grid.cols):
+            xy = sol_grid.grid[i, j, :2]
+            if not np.any(np.isnan(xy)) and mf.geo_dist(xy) >= R:
+                sol_grid.grid[i, j, :] = np.nan
+                si, sj = (j, i) if surf_grid.check else (i, j)
+                surf_grid.grid[si, sj, :] = np.nan
+    for bd in (sol_grid.xbd, sol_grid.ybd):
+        for k in range(len(bd)):
+            xy = bd[k, :2]
+            if not np.any(np.isnan(xy)) and mf.geo_dist(xy) >= R:
+                bd[k, :] = np.nan
+    if sol_grid.children is not None:
+        for sol_child, surf_child in zip(sol_grid.children, surf_grid.children):
+            _prune_trees(sol_child, surf_child, R)
 
 def main():
     parser = argparse.ArgumentParser(
@@ -30,6 +87,14 @@ def main():
     parser.add_argument('--separation', '-s', type=float, default=0.1)
     parser.add_argument('--bp_algorithm', '-bp', type=str, default='bp1',
                         choices=['bp1', 'bp2'])
+
+    # Pruning
+    parser.add_argument('--prune', action='store_true',
+                        help='hide all points with geodesic radius >= R')
+
+    # Full tiling
+    parser.add_argument('--full', type=int, default=None, metavar='N',
+                        help='tile the surface 2N times to fill the hyperbolic disk (use with phi0=pi/N)')
 
     # Which plots to show (Pdisc and surface are always shown)
     parser.add_argument('--arc', action='store_true',
@@ -92,26 +157,30 @@ def main():
     else:
         jeff.bp2()
 
+    norman = classes.Norm_tree(jeff)
+    sherman = classes.Surf_tree(norman)
+    if args.prune:
+        _prune_trees(jeff.base, sherman.base, R)
+
     vis.Pdisc_plot(jeff.base,
                    plt_pts=args.plt_pts, plt_lines=args.plt_lines,
                    plt_bps=args.plt_bps, plt_colors=args.plt_colors,
                    plt_bds=args.plt_bds, save=args.save,
                    f_name=args.f_name, pt_size=args.pt_size, rev=args.rev)
 
-    norman = classes.Norm_tree(jeff)
     if args.arc:
         vis.Arc_plot(norman.norms_base,
                      plt_bps=args.plt_bps, plt_bds=args.plt_bds,
                      depth_dis=args.depth_dis)
-    sherman = classes.Surf_tree(norman)
     if args.save_surf:
         f_path = f'meshes/{args.f_name_surf}.{args.f_type_surf}'
     else:
         f_path = None
+    tiling_transforms = _make_tiling_transforms(args.full) if args.full is not None else None
     vis.Surf_plot(sherman.base,
                   plt_bps=args.plt_bps, plt_bds=args.plt_bds,
                   plt_surf=args.plt_surf, plt_wireframe=args.plt_wireframe,
-                  save_path=f_path)
+                  save_path=f_path, tiling_transforms=tiling_transforms)
 
 if __name__ == '__main__':
     main()
