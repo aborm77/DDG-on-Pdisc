@@ -88,6 +88,10 @@ def main():
     parser.add_argument('--bp_algorithm', '-bp', type=str, default='bp1',
                         choices=['bp1', 'bp2'])
 
+    # Energy
+    parser.add_argument('--energy', action='store_true',
+                        help='compute discrete Willmore energy per quad and color the surface')
+
     # Pruning
     parser.add_argument('--prune', action='store_true',
                         help='hide all points with geodesic radius >= R')
@@ -140,11 +144,14 @@ def main():
         return
 
     # If you are viewing this in an IDE you can change the main parameters here
-    phi0 = args.phi0
+    if args.full is None:
+        phi0 = args.phi0
+    else:
+        phi0 = np.pi / args.full
     cutoff = args.cutoff
     R = args.radius
     sep = args.separation
-    jeff = classes.Sol_tree(phi0, cutoff, R, sep)
+    jeff = classes.Sol_tree(phi0, cutoff, R, sep, energy=args.energy)
 
     # Interesting params for bp2
     # phi0 = np.pi/6
@@ -179,8 +186,11 @@ def main():
     tiling_transforms = _make_tiling_transforms(args.full) if args.full is not None else None
     vis.Surf_plot(sherman.base,
                   plt_bps=args.plt_bps, plt_bds=args.plt_bds,
-                  plt_surf=args.plt_surf, plt_wireframe=args.plt_wireframe,
-                  save_path=f_path, tiling_transforms=tiling_transforms)
+                  plt_surf=args.plt_surf,
+                  plt_wireframe=args.plt_wireframe and not args.energy,
+                  save_path=f_path, tiling_transforms=tiling_transforms,
+                  sol_grid=jeff.base if args.energy else None,
+                  plt_energy=args.energy)
 
 if __name__ == '__main__':
     main()

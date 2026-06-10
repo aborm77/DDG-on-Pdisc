@@ -105,3 +105,10 @@ def angle(w1, w2):
 def geo_dist(w):
     """Return the geodesic distance from the origin to w in the Poincaré disk."""
     return 2 * np.arctanh(norm(w))
+
+
+def wilmore(rho, s):
+    """Compute the discrete Wilmore energy of a  Poincaré disk for a single quad."""
+    t = np.tan(rho / 2)
+    A = 4 * np.arctan(np.cosh(s) * t) - 2 * rho
+    return A * (t**2 + np.cot(rho / 2)**2)
