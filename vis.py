@@ -315,14 +315,14 @@ class Surf_plot:
     """
     def __init__(self, surf_grid, plt_bps=True, plt_bds=True, plt_surf=False,
                  plt_wireframe=True, plt_wilmore=False, save_path=None,
-                 tiling_transforms=None):
+                 tiling_transforms=None, sol_grid=None, plt_energy=False):
         if isinstance(surf_grid, mesh.Surf_create):
             self.surf_grid = None
             self.surf = surf_grid
         else:
             self.surf_grid = surf_grid
             if tiling_transforms is not None:
-                base_surf = mesh.Surf_create(surf_grid)
+                base_surf = mesh.Surf_create(surf_grid, sol_grid)
                 copies = []
                 for t, _ in tiling_transforms:
                     copy = base_surf.mesh.copy()
@@ -336,11 +336,14 @@ class Surf_plot:
                 self.surf.points = full_mesh.points
                 self.surf.degrees = self.surf.get_vertex_degrees()
             else:
-                self.surf = mesh.Surf_create(surf_grid)
+                self.surf = mesh.Surf_create(surf_grid, sol_grid)
 
         self.pl = pv.Plotter()
 
-        if plt_surf:
+        if plt_energy and 'energy' in self.surf.mesh.cell_data.keys():
+            self.pl.add_mesh(self.surf.mesh, scalars='energy', cmap='plasma',
+                             show_scalar_bar=True)
+        elif plt_surf:
             self.pl.add_mesh(self.surf.mesh, show_edges=True, line_width=1)
         if plt_wireframe and self.surf_grid is not None:
             self.plot_wireframe(self.surf_grid, transforms=tiling_transforms)

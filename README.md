@@ -113,12 +113,13 @@ By default this shows the Poincaré disk plot and the K-surface in R³ as a wire
 | `--separation` | `-s` | `0.1` | Side length of all hyperbolic rhombi |
 | `--bp_algorithm` | `-bp` | `bp1` | Branch point algorithm (`bp1` or `bp2`) |
 
-### Pruning and tiling
+### Pruning, tiling, and energy
 
 | Argument | Default | Description |
 |---|---|---|
 | `--prune` | off | NaN-mask all grid points with geodesic radius ≥ `R`, clipping both the Poincaré disk plot and the R³ surface to a geodesic ball of radius `R` |
-| `--full N` | — | Tile the surface 2N times by rotating copies by multiples of `π/N` around the z-axis, filling the full hyperbolic disk. Odd-indexed copies are additionally reflected through the xy-plane so the surface closes up. Intended for use with `--phi0 π/N`. `--prune` is applied before tiling if both flags are given. |
+| `--full N` | — | Cover the hyperbolic disk of radius `R` by rotating copies of sectors with initial angle `π/N` by multiples of `π/N` around the z-axis, creating a total of `2N` sectors. Odd-indexed copies are additionally reflected through the xy-plane so the surface closes up. `--prune` is applied before tiling if both flags are given. |
+| `--energy` | off | Compute the discrete Willmore energy `A(κ₁² + κ₂²)` per quad (where `κ = ±tan(ρ/2)`, `∓cot(ρ/2)` and `A` is the quad area) and render the surface colored by this scalar field. Disables the wireframe by default. |
 
 ### Plots to show
 
@@ -187,7 +188,7 @@ python main.py --save --f_name my_surface
 python main.py --prune -R 3.0
 
 # Tile a phi0=pi/3 surface 6 times to fill the hyperbolic disk
-python main.py -p 1.0472 --full 3
+python main.py --full 3
 ```
 
 ## Citation

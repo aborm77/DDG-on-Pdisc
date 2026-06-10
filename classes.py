@@ -24,6 +24,12 @@ from numba import njit as _njit
 # Numba-JIT versions of math.py functions. Duplicated here because numba requires
 # the entire call graph to be @njit-decorated.
 @_njit
+def _wilmore(rho, s):
+    t = np.tan(rho / 2)
+    A = 4 * np.arctan(np.cosh(s) * t) - 2 * rho
+    return A * (t**2 + (1 / t)**2)
+
+@_njit
 def _f_nb(pt, z0):
     p  = pt[0] + 1j * pt[1]
     z  = z0[0] + 1j * z0[1]
@@ -45,7 +51,7 @@ def _angle_nb(w1, w2):
     return np.arccos(cos_val)
 
 @_njit
-def _grid_solve_nb(sol_grid, rows, cols):
+def _grid_solve_nb(sol_grid, rows, cols, sep, energy=False):
     for i in range(rows - 1):
         for j in range(cols - 1):
             z0 = sol_grid[i,   j,   :2]
@@ -53,7 +59,9 @@ def _grid_solve_nb(sol_grid, rows, cols):
             z2 = sol_grid[i+1, j,   :2]
             w1 = _f_nb(z1, -z0)
             w2 = _f_nb(z2, -z0)
-            sol_grid[i, j, 2]        = _angle_nb(w1, w2)
+            sol_grid[i, j, 2]       = _angle_nb(w1, w2)
+            if energy:
+                sol_grid[i, j, 3]   =  _wilmore(sol_grid[i, j, 2], sep)
             sol_grid[i+1, j+1, :2]  = _f_nb(_w12_comp_nb(w1, w2), z0)
     return sol_grid
 
@@ -70,7 +78,7 @@ class Sol_grid:
     (x, y) coordinates of each vertex in the disk, and column 2 holds the
     Sine-Gordon angle ρ at that vertex.
     """
-    def __init__(self, xbd, ybd, parent, R, ams, test=False):
+    def __init__(self, xbd, ybd, parent, R, ams, sep, test=False, energy=False):
         self.xbd = xbd
         self.ybd = ybd
         self.parent = parent
@@ -81,11 +89,13 @@ class Sol_grid:
         self.r1 = xbd[-1,0]
         self.r2 = ybd[-1,1]
         self.npts = xbd.shape[0]
+        self.sep = sep
+        self.energy = energy
 
         self.bp_loc = None
         self.children = None
         self.old_grid = None
-        
+
         self.grid = self.grid_solve()
 
         # determining the maximum distances in a sector for the purpose of plotting
@@ -98,10 +108,10 @@ class Sol_grid:
         
     def grid_solve(self):
         """Build the Chebyshev net by solving for each interior vertex quad-by-quad."""
-        sol_grid = np.full((self.rows, self.cols, 3), np.nan)
+        sol_grid = np.full((self.rows, self.cols, 4), np.nan)
         sol_grid[0, :, :2] = self.xbd[:, :2]
         sol_grid[:, 0, :2] = self.ybd[:, :2]
-        return _grid_solve_nb(sol_grid, self.rows, self.cols)
+        return _grid_solve_nb(sol_grid, self.rows, self.cols, self.sep, self.energy)
     
                 
     def angle_test(self):
@@ -154,7 +164,7 @@ class Sol_tree:
     remain below cutoff. bp2 instead targets a specific rho_target value on the
     sector boundary or diagonal.
     """
-    def __init__(self, phi0, cutoff, R, sep):
+    def __init__(self, phi0, cutoff, R, sep, energy=False):
         if (phi0 >= np.pi or phi0 <= 0):
             print("Error: phi0 is not in the allowed range of (0,pi)")
             return -1
@@ -162,16 +172,17 @@ class Sol_tree:
             print("Error: value of phi0 is greater than the cutoff value")
             print("branch point placement impossible")
             return -1
-        
+
         self.phi0 = phi0
         self.cutoff = cutoff
         self.R = R
         self.sep = sep
+        self.energy = energy
         self.npts = int(np.ceil(R / sep)) + 1
 
         xbd = self.create_geo(0, phi0, self.npts)
         ybd = self.create_geo(phi0, phi0, self.npts)
-        self.base = Sol_grid(xbd, ybd, 'base', self.R, 'ams')
+        self.base = Sol_grid(xbd, ybd, 'base', self.R, 'ams', self.sep, energy=self.energy)
         
         print('Initialized a solution tree with intial grid of size ' + str(self.npts) +'x' +  str(self.npts))
     
@@ -214,8 +225,8 @@ class Sol_tree:
     
         rows = sol_grid.rows
         cols = sol_grid.cols
-        base_grid = np.full((rows, cols, 3), np.nan)
-        
+        base_grid = np.full((rows, cols, 4), np.nan)
+
         # finding branch points
         us = 0
         vs = 0
@@ -318,8 +329,8 @@ class Sol_tree:
         
         rows = sol_grid.rows
         cols = sol_grid.cols
-        base_grid = np.full((rows, cols, 3), np.nan)
-        
+        base_grid = np.full((rows, cols, 4), np.nan)
+
         if not (us == 0 or vs == 0):
             base_grid[:    , :vs + 1, :] = sol_grid.grid[:    , :vs + 1, :]
             base_grid[:us+1, vs+1:  , :] = sol_grid.grid[:us+1, vs+1:  , :]
@@ -397,9 +408,9 @@ class Sol_tree:
             geo2[i,:2] = math.f(geo2[i,:2],z0)
         
         # solving on new grids
-        sect1 = Sol_grid(geo2, ax1, sol_grid, self.R, 'ams1')
-        sect2 = Sol_grid(geo1, geo2, sol_grid, self.R, 'ams')
-        sect3 = Sol_grid(ax3, geo1, sol_grid, self.R, 'ams3')
+        sect1 = Sol_grid(geo2, ax1, sol_grid, self.R, 'ams1', self.sep, energy=self.energy)
+        sect2 = Sol_grid(geo1, geo2, sol_grid, self.R, 'ams', self.sep, energy=self.energy)
+        sect3 = Sol_grid(ax3, geo1, sol_grid, self.R, 'ams3', self.sep, energy=self.energy)
         sol_grid.children = [sect1, sect2, sect3]
         
         
