@@ -26,7 +26,8 @@ from numba import njit as _njit
 @_njit
 def _wilmore(rho, s):
     t = np.tan(rho / 2)
-    A = 4 * np.arctan(np.cosh(s) * t) - 2 * rho
+    # A = 4 * np.arctan(np.cosh(s) * t) - 2 * rho
+    A = np.sin(rho) * (s**2)
     return A * (t**2 + (1 / t)**2)
 
 @_njit

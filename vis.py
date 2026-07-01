@@ -341,22 +341,28 @@ class Surf_plot:
         self.pl = pv.Plotter()
 
         if plt_energy and 'energy' in self.surf.mesh.cell_data.keys():
+            sargs = dict(
+                label_font_size=64,
+                title = '',
+                position_x=0.85, # Moves it to the right (valid range is 0.0 to 1.0)
+                position_y=0.1,  # Sets bottom vertical position
+                height=0.8,      # Sets the height of the bar
+                vertical=True,    # Keeps the bar vertical
+                fmt='%.3f'
+                )
             self.pl.add_mesh(self.surf.mesh, scalars='energy', cmap='plasma',
-                             show_scalar_bar=True)
+                             scalar_bar_args=sargs)
         elif plt_surf:
             self.pl.add_mesh(self.surf.mesh, show_edges=True, line_width=1)
         if plt_wireframe and self.surf_grid is not None:
             self.plot_wireframe(self.surf_grid, transforms=tiling_transforms)
-        if plt_bds and self.surf_grid is not None:
+        if plt_bds and self.surf_grid is not None and not plt_energy:
             self.plot_bds(self.surf_grid, transforms=tiling_transforms)
         if plt_bps:
             self.plot_bps()
         if save_path is not None:
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             self.surf.save(save_path)
-        # This function is still experimental
-        if plt_wilmore:
-            self.plot_wilmore()
 
         self.pl.add_axes()
         self.pl.show()
@@ -437,20 +443,3 @@ class Surf_plot:
         if self._bd_buf:
             self.pl.add_mesh(pv.merge(self._bd_buf), line_width=3, color='black')
         del self._bd_buf
-            
-            
-    def plot_wilmore(self):
-        """Plots an approximation of k_1^2 + k_2^2 at all vertices using surface 
-        fitting.
-        TODO: do a proper DDG implementation. Should be easy, just need to track
-        rho on the surface
-        """
-        K = self.surf.mesh.triangulate().curvature(curv_type='Gaussian')
-        H = self.surf.mesh.triangulate().curvature(curv_type='Mean')
-        
-        raw = 4 * H**2 - 2 * K
-        interior_mask = self.surf.degrees == 4    
-        raw[~interior_mask] = 0
-        
-        self.surf.mesh['curvature_sq'] = np.clip(raw, 0, np.percentile(raw, 80))
-        self.pl.add_mesh(self.surf.mesh, scalars='curvature_sq', cmap='plasma')
