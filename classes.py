@@ -464,31 +464,6 @@ class Sol_tree:
             print(f"Time taken to place branch points: {e - s:.3f}s")
 
 
-class Mask_grid:
-    """Remove grid points outside the geodesic radius by setting them to NaN."""
-    def __init__(self, sol_grid, parent):
-        self.grid = np.copy(sol_grid.grid)
-        self.cols = sol_grid.cols
-        self.rows = sol_grid.rows
-        self.R = sol_grid.R
-
-        self.grid_mask()
-        # true at pts (i,j) that are not equal to nan (i.e. the pts we want to graph)
-        self.mask = np.logical_not(np.isnan(self.grid[:,:,0]))
-
-
-    # setting points outside the geodesic radius equal to nan
-    def grid_mask(self):
-        for i in range(self.rows):
-            for j in range(self.cols):
-                pt = self.grid[i,j,:2]
-
-                if not np.any(np.isnan(pt)):
-                    dist = math.geo_dist(pt)
-                    if dist > self.R:
-                        self.grid[i,j,:] = np.nan
-
-
 class Norm_grid:
     """
     The purpose of this class is to create an array of quads on the sphere based
