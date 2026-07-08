@@ -63,14 +63,14 @@ def _prune_trees(sol_grid, surf_grid, R):
     for i in range(sol_grid.rows):
         for j in range(sol_grid.cols):
             xy = sol_grid.grid[i, j, :2]
-            if not np.any(np.isnan(xy)) and mf.geo_dist(xy) >= R:
+            if not np.any(np.isnan(xy)) and mf.geo_dist(xy) > R:
                 sol_grid.grid[i, j, :] = np.nan
                 si, sj = (j, i) if surf_grid.check else (i, j)
                 surf_grid.grid[si, sj, :] = np.nan
     for bd in (sol_grid.xbd, sol_grid.ybd):
         for k in range(len(bd)):
             xy = bd[k, :2]
-            if not np.any(np.isnan(xy)) and mf.geo_dist(xy) >= R:
+            if not np.any(np.isnan(xy)) and mf.geo_dist(xy) > R:
                 bd[k, :] = np.nan
     if sol_grid.children is not None:
         for sol_child, surf_child in zip(sol_grid.children, surf_grid.children):
