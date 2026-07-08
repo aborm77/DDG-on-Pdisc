@@ -211,47 +211,65 @@ def prune_and_energy(sol_grid, R):
 
 
 # Experimenting to see if our branched surfaces are statisfying e^{\sqrt{R}} scaling
-cutoff = 1.9
-n = 2
-phi0 = np.pi/n
-sep = 0.001
-Rs= np.linspace(1,3,20)
-data = {}
-data['R'] = Rs
-data['energy'] = []
-data['n'] = []
-data['const_pi/2'] = []
-for R in Rs:
-    print(R)
-    if R >= 2:
-        n = 3
-    # const for comparison
-    phi0 = np.pi/2
-    jeff0 = Sol_tree(phi0, cutoff, R, sep, energy=True)
-    jeff0.bp1()
-    en0 = 2 * 2 * prune_and_energy(jeff0.base, R)
-    data['const_pi/2'].append(en0)
+# cutoff = 2.1
+# ns = [2,3,4,5,6,7,8,9,10]
+# sep = 0.03
+# Rs= np.linspace(1,6,30)
+# data = {}
+# data['R'] = Rs
+# data['energy'] = []
+# data['n'] = []
+# data['const_pi/2'] = []
+# for R in Rs:
+#     # const for comparison
+#     phi0 = np.pi/2
+#     jeff0 = Sol_tree(phi0, cutoff, R, sep, energy=True)
+#     jeff0.bp1()
+#     en0 = 2 * 2 * prune_and_energy(jeff0.base, R)
+#     data['const_pi/2'].append(en0)
     
-    # first canidate
-    print('can1')
-    phi1 = np.pi / n
-    jeff1 = Sol_tree(phi1, cutoff, R, sep, energy=True)
-    jeff1.bp1()
-    en1 = 2 * n * prune_and_energy(jeff1.base, R)
+#     del jeff0
     
-    data['energy'].append(en1)
-    data['n'].append(n)
+#     ens = []
+#     print('R', R)
+#     for n in ns:
+#         print('pi/'+str(n))
+#         phi1 = np.pi / n
+#         jeff1 = Sol_tree(phi1, cutoff, R, sep, energy=True)
+#         jeff1.bp1()
+#         ens.append(2 * n * prune_and_energy(jeff1.base, R))
+#         del jeff1
     
-    print()
+#     data['energy'].append(min(ens))
+#     data['n'].append(ens.index(min(ens)) + 2)
+#     print()
+#     gc.collect()
     
-    del jeff0
-    del jeff1
     
-gc.collect()
 
-df = pd.DataFrame(data)
-df.to_csv('test_small.csv', index=False)
+
+# df = pd.DataFrame(data)
+# df.to_csv('data/test_big_rad.csv', index=False)
     
-data = pd.read_csv('test.csv')
-plt.plot(data['R'], np.log(data['energy']))
+data = pd.read_csv('data/test_big_rad.csv')
+
+plt.rcParams.update({'font.size': 16})
+
+plt.figure(1)
+As = 2 * np.pi *(np.cosh(data['R']) - 1)
+plt.plot(data['R'], np.log(data['energy'] / As), label='branched energy')
+plt.plot(data['R'], data['R'], label=r'$e^R$', c='black', linestyle='dashed')
+plt.xlabel('Radius R')
+plt.ylabel(r'$\ln$(Total Willmore Energy / Area)')
+plt.legend()
+plt.savefig('data/opt_energy.pdf', bbox_inches='tight')
 plt.show()
+
+plt.figure(2)
+for i,R in enumerate(data['R']):
+    plt.scatter(R, data['n'][i], color='blue')
+plt.xlabel('Radius R')
+plt.ylabel('n')
+plt.savefig('data/opt_energy_ns.pdf',bbox_inches='tight')
+plt.show()
+
