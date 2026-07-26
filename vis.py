@@ -206,6 +206,7 @@ class Arc_plot:
         self.depth_dis = depth_dis
 
         self.pl = pv.Plotter()
+        self.plot_sphere()
         self.plot_arcs(norm_grid)
 
         if plt_bds:
@@ -218,6 +219,16 @@ class Arc_plot:
         self.pl.show()
         
         
+    def plot_sphere(self, radius=0.98):
+        """Plot a light blue sphere just inside the unit sphere the arcs live on.
+
+        The slightly smaller radius keeps the arcs visible on top of the surface
+        rather than z-fighting with it.
+        """
+        sphere = pv.Sphere(radius=radius, center=(0, 0, 0),
+                           theta_resolution=60, phi_resolution=60)
+        self.pl.add_mesh(sphere, color='lightblue')
+
     def plot_arcs(self, norm_grid, depth=0):
         """Plot the circular arcs forming the sides of each spherical rhombus in the Chebyshev net.
 
